@@ -1,0 +1,12 @@
+# Rebound dependencies
+streamlit>=1.36
+openai>=1.30          # Fireworks-compatible client (text analysis + vision OCR)
+pdfplumber>=0.11      # primary PDF text extraction
+PyMuPDF>=1.24         # fallback PDF text extraction
+pypdf>=4.0            # final fallback PDF text extraction
+pdf2image>=1.17       # rasterize scanned PDFs -> PNG for Fireworks vision OCR
+# NOTE: pdf2image also needs the Poppler binary installed on your system:
+#   Windows: download Poppler, add its \bin folder to PATH
+#   macOS:   brew install poppler
+#   Linux:   sudo apt-get install poppler-utils
+streamlit-agraph>=0.0.45   # optional: interactive relationship network (graceful graphviz fallback if absent)

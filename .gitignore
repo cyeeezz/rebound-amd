@@ -1,0 +1,16 @@
+# Secrets
+.streamlit/secrets.toml
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Rebound backups / scratch
+app.py.*-backup
+requirements.txt.*-backup
+
+# AMD notebook artifacts (loaded at runtime, not committed)
+embeddings.npy
+metadata.json

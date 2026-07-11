@@ -1,0 +1,238 @@
+{
+  "topics": [
+    {
+      "title": "Cell Structure",
+      "summary": "Learning objectives\n● Identify the main organelles found in eukaryotic cells and state their functions. ● Compare prokaryotic and eukaryotic cells.",
+      "key_concepts": [
+        "Cells",
+        "Mitochondria",
+        "Ribosomes",
+        "Learning",
+        "Identify",
+        "Compare"
+      ],
+      "definitions": [
+        "Explanation\nAll living organisms are composed of cells, and their internal organisation determines what a cell\ncan do.",
+        "The nucleus is enclosed by a double membrane and holds the cell's chromosomal\nDNA; this DNA contains genes whose instructions influence the cell's activities.",
+        "Mitochondria,\nalso double-membraned, carry out many of the reactions involved in aerobic respiration and use\nenergy released from glucose to produce ATP, though this is only part of the overall respiration\nprocess.",
+        "● Mitochondria carry out many reactions of aerobic respiration and use energy released\nfrom glucose to produce ATP, but are not the sole site of respiration."
+      ],
+      "learning_objectives": [
+        "Understand: Learning objectives ● Identify the main organelles found in eukaryotic cells and state the",
+        "Understand: ● Compare prokaryotic and eukaryotic cells.",
+        "Understand: ● Recognise structural features unique to plant cells."
+      ],
+      "biological_processes": [],
+      "relationships": [],
+      "prerequisites": [],
+      "example_applications": [],
+      "estimated_study_time": "90 min"
+    },
+    {
+      "title": "Cellular Respiration",
+      "summary": "Learning objectives\n● Describe the overall purpose and general equation of aerobic respiration. ● State where glycolysis and the later stages of aerobic respiration take place.",
+      "key_concepts": [
+        "Aerobic",
+        "Explain",
+        "Glycolysis",
+        "Respiration",
+        "Learning",
+        "Describe"
+      ],
+      "definitions": [
+        "Explanation\nBuilding on the organelles introduced in the previous section, respiration is the process by which\ncells break down glucose to release energy.",
+        "If oxygen is available, the products of\nglycolysis, including pyruvate, can enter the mitochondria, where the later stages of aerobic\nrespiration occur, releasing far more energy overall.",
+        "Aerobic respiration depends on a\ncontinuous oxygen supply to proceed, although oxygen is used directly only at a specific point\nwithin these later stages rather than throughout every reaction.",
+        "When oxygen is limited or\nabsent, cells rely instead on anaerobic pathways."
+      ],
+      "learning_objectives": [
+        "Understand: Learning objectives ● Describe the overall purpose and general equation of aerobic respira",
+        "Understand: ● State where glycolysis and the later stages of aerobic respiration take place.",
+        "Understand: ● Compare aerobic respiration with anaerobic pathways."
+      ],
+      "biological_processes": [
+        "Glycolysis",
+        "Respiration"
+      ],
+      "relationships": [],
+      "prerequisites": [],
+      "example_applications": [],
+      "estimated_study_time": "90 min"
+    },
+    {
+      "title": "Energy Transfer in Cells",
+      "summary": "Learning objectives\n● Describe the roles of ATP and ADP in cells. ● Explain how ATP hydrolysis releases energy for cellular use.",
+      "key_concepts": [
+        "Explain",
+        "Learning",
+        "Describe",
+        "Identify",
+        "Explanation",
+        "Cells"
+      ],
+      "definitions": [
+        "● Explain why some energy is always lost as heat during these transfers.",
+        "When a cell requires energy, ATP is\nhydrolysed back into ADP and phosphate; overall, this hydrolysis reaction releases usable\nenergy, which the cell can then couple to other processes.",
+        "Because ATP is broken down and reformed\ncontinuously rather than stockpiled, it functions as an energy transfer molecule rather than a\nlong-term energy store; longer-term energy stores include glycogen and lipids.",
+        "Key points\n● ATP is formed by adding a phosphate group to ADP, using energy released during\nrespiration."
+      ],
+      "learning_objectives": [
+        "Understand: Learning objectives ● Describe the roles of ATP and ADP in cells.",
+        "Understand: ● Explain how ATP hydrolysis releases energy for cellular use.",
+        "Understand: ● Identify processes that rely on ATP as an energy transfer molecule."
+      ],
+      "biological_processes": [
+        "Explanation"
+      ],
+      "relationships": [
+        "Cell Structure",
+        "Cellular Respiration"
+      ],
+      "prerequisites": [
+        "Cell Structure",
+        "Cellular Respiration"
+      ],
+      "example_applications": [],
+      "estimated_study_time": "90 min"
+    },
+    {
+      "title": "DNA Structure",
+      "summary": "Learning objectives\n● Describe the structure of a DNA nucleotide and the double helix. ● Explain complementary base pairing and its role in accurate replication.",
+      "key_concepts": [
+        "Explain",
+        "Learning",
+        "Describe",
+        "Distinguish",
+        "Recognise",
+        "Explanation"
+      ],
+      "definitions": [
+        "Explanation\nDNA (deoxyribonucleic acid) is the molecule that carries genetic information in almost all living\norganisms.",
+        "This predictable pairing means that each existing strand can act as a template for\nbuilding a new complementary strand, allowing the DNA sequence to be copied accurately\nwhen cells divide.",
+        "A chromosome consists of a long DNA molecule associated with proteins; in\neukaryotic cells, it becomes highly condensed during cell division, and a gene is a section of\nDNA containing instructions for producing a functional product, such as a protein or an RNA\nmolecule.",
+        "● A chromosome consists of a long DNA molecule associated with proteins; a gene is a\nsection of DNA containing instructions for a functional product."
+      ],
+      "learning_objectives": [
+        "Understand: Learning objectives ● Describe the structure of a DNA nucleotide and the double helix.",
+        "Understand: ● Explain complementary base pairing and its role in accurate replication.",
+        "Understand: ● Distinguish between DNA, genes, and chromosomes."
+      ],
+      "biological_processes": [
+        "Explanation"
+      ],
+      "relationships": [
+        "Cellular Respiration",
+        "Energy Transfer in Cells"
+      ],
+      "prerequisites": [
+        "Cellular Respiration",
+        "Energy Transfer in Cells"
+      ],
+      "example_applications": [],
+      "estimated_study_time": "90 min"
+    },
+    {
+      "title": "Gene Expression",
+      "summary": "Learning objectives\n● Describe transcription and translation, and state where each occurs. ● Explain the roles of mRNA, ribosomes, codons, and amino acids.",
+      "key_concepts": [
+        "Explain",
+        "Learning",
+        "Describe",
+        "Recognise",
+        "Understand",
+        "Explanation"
+      ],
+      "definitions": [
+        "Explanation\nThe sections of DNA introduced in the previous section only have an effect on a cell once their\ninformation is put to use, through a process called gene expression.",
+        "The first, transcription, takes place in the nucleus, where the DNA sequence of a gene\nis used as a template to build a single strand of messenger RNA (mRNA).",
+        "As the ribosome moves along the mRNA, amino acids\nare joined together in the order specified, building a protein.",
+        "Many genes are expressed in this\nway to produce proteins, but not all of them are: some genes are transcribed into RNA\nmolecules that carry out a function directly, without ever being translated into protein."
+      ],
+      "learning_objectives": [
+        "Understand: Learning objectives ● Describe transcription and translation, and state where each occurs.",
+        "Understand: ● Explain the roles of mRNA, ribosomes, codons, and amino acids.",
+        "Understand: ● Recognise that genes can produce proteins or functional RNA molecules."
+      ],
+      "biological_processes": [
+        "Explanation"
+      ],
+      "relationships": [
+        "Cellular Respiration",
+        "Energy Transfer in Cells",
+        "DNA Structure"
+      ],
+      "prerequisites": [
+        "Cellular Respiration",
+        "Energy Transfer in Cells",
+        "DNA Structure"
+      ],
+      "example_applications": [],
+      "estimated_study_time": "90 min"
+    },
+    {
+      "title": "Genetic Inheritance",
+      "summary": "Learning objectives\n● Define allele, genotype, and phenotype. ● Explain dominant and recessive inheritance using a Punnett-square example.",
+      "key_concepts": [
+        "Explain",
+        "Many",
+        "Learning",
+        "Define",
+        "Punnett-square",
+        "Distinguish"
+      ],
+      "definitions": [
+        "Most human\nbody cells are diploid, meaning they contain two sets of chromosomes, one inherited from each\nparent.",
+        "Gametes\n(sperm and egg cells), by contrast, are haploid, containing only one copy of each gene, so that\nwhen they combine at fertilisation, the resulting offspring receives the usual two copies.",
+        "An\norganism's genotype is the specific combination of alleles it carries for a gene, while its\nphenotype is the observable characteristic produced by the interaction between its genotype\nand the environment.",
+        "In simple cases of complete dominance, a dominant allele affects the\nphenotype when one or two copies are present, while the recessive phenotype appears only\nwhen two recessive alleles are inherited."
+      ],
+      "learning_objectives": [
+        "Understand: Learning objectives ● Define allele, genotype, and phenotype.",
+        "Understand: ● Explain dominant and recessive inheritance using a Punnett-square example.",
+        "Understand: ● Distinguish diploid body cells from haploid gametes."
+      ],
+      "biological_processes": [],
+      "relationships": [
+        "Cellular Respiration",
+        "Energy Transfer in Cells",
+        "DNA Structure",
+        "Gene Expression"
+      ],
+      "prerequisites": [
+        "Cellular Respiration",
+        "Energy Transfer in Cells",
+        "DNA Structure",
+        "Gene Expression"
+      ],
+      "example_applications": [
+        "Understand: ● Explain dominant and recessive inheritance using a Punnett-square example."
+      ],
+      "estimated_study_time": "90 min"
+    },
+    {
+      "title": "Historical Biology Experiments",
+      "summary": "Learning objectives\n● Describe Robert Hooke's observations of cork and their significance. ● Explain what Mendel's pea-plant experiments revealed about inheritance.",
+      "key_concepts": [
+        "Franklin",
+        "Hooke",
+        "Explain",
+        "Mendel",
+        "Hershey",
+        "Chase"
+      ],
+      "definitions": [],
+      "learning_objectives": [
+        "Understand: Learning objectives ● Describe Robert Hooke's observations of cork and their significance.",
+        "Understand: ● Explain what Mendel's pea-plant experiments revealed about inheritance.",
+        "Understand: ● Describe how the Hershey–Chase experiment identified DNA as genetic material."
+      ],
+      "biological_processes": [],
+      "relationships": [],
+      "prerequisites": [],
+      "example_applications": [],
+      "estimated_study_time": "90 min"
+    }
+  ],
+  "generated": 1783711499.2350085,
+  "source": "local"
+}
