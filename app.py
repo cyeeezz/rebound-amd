@@ -17,10 +17,17 @@ import streamlit as st
 from ui.components import (
     PRIORITY_CHIP as _PRIORITY_CHIP,
     STATUS_TEXT as _STATUS_TEXT,
+    badge as _badge,
+    card as _card,
     chip as _chip,
+    page_header as _page_header,
+    page_shell as _page_shell,
     page_title as _page_title,
+    progress_display as _progress_display,
     priority_badge as _priority_chip,
+    responsive_button_row as _responsive_button_row,
     section_title as _section,
+    sidebar_insight_card as _sidebar_insight_card,
     status_badge as _status_chip,
 )
 from ui.icons import ICON_PATHS as _ICON_PATHS
@@ -2654,56 +2661,91 @@ def render_diagnostic_question(questions):
     n = len(questions)
     step = max(0, min(st.session_state.get("diag_step", 0), n - 1))
     q = questions[step]
-    with st.container(border=True):
-        h = st.columns([3, 2, 2])
-        with h[0]:
-            _section("Diagnostic Test", "clipboard")
-            st.caption("Assess your current understanding")
-        with h[1]:
-            st.progress((step + 1) / n)
-            st.caption(f"{(step + 1) / n:.0%} complete")
-        with h[2]:
-            st.caption(f"Question {step + 1} of {n}")
-            st.markdown(_chip(q["topic"], "#F6FFEA", "#3f6b1f"), unsafe_allow_html=True)
-    with st.container(border=True):
-        top = st.columns([3, 1])
-        top[0].markdown(f"<span style='color:var(--primary);font-weight:700;font-size:1.1rem'>"
-                        f"Question {step + 1}</span>", unsafe_allow_html=True)
-        top[1].markdown(f"<div style='text-align:right'>{_chip(str(q['marks']) + ' marks', 'rgba(250,133,90,.14)', '#8a3b1e')}</div>",
-                        unsafe_allow_html=True)
-        st.markdown(f"### {q['question']}")
-        st.markdown(_chip("Biology", "#F6FFEA", "#3f6b1f"), unsafe_allow_html=True)
-        key = f"diag_{q['id']}"
-        if key not in st.session_state:
-            st.session_state[key] = store.get(q["id"], "")
-        st.text_area("Your answer", key=key, height=200, placeholder="Write your answer here...",
-                     label_visibility="collapsed")
-        st.caption("Use full sentences. You can reference key biological processes and examples.")
+    progress = (step + 1) / n
+    topic_badge = _badge(q["topic"], "green")
+    count_badge = _badge(f"Question {step + 1} of {n}", "neutral")
+    marks_badge = _badge(f"{q['marks']} marks", "coral")
 
-    def _harvest():
-        store[q["id"]] = st.session_state.get(key, "")
+    with _page_shell("diagnostic_question"):
+        with _card("diagnostic_header"):
+            header = st.columns([3.2, 2.7, 2.5], gap="large", vertical_alignment="center")
+            with header[0]:
+                _page_header(
+                    "Diagnostic Test",
+                    "Assess your current understanding",
+                    icon_name="clipboard",
+                )
+            with header[1]:
+                _progress_display(progress, key="diagnostic_header", label="Progress")
+            with header[2]:
+                st.markdown(
+                    f"<div class='rb-diagnostic-v2-metadata'>{count_badge}{topic_badge}</div>",
+                    unsafe_allow_html=True,
+                )
 
-    st.divider()
-    b = st.columns([1, 1, 1, 3])
-    if b[0].button("Previous", key="dq_prev", disabled=(step == 0)):
-        _harvest()
-        st.session_state["diag_step"] = step - 1
-        st.rerun()
-    if b[1].button("Next", key="dq_next", disabled=(step == n - 1)):
-        _harvest()
-        st.session_state["diag_step"] = step + 1
-        st.rerun()
-    if b[2].button("Finish", type="primary", key="dq_finish"):
-        _harvest()
-        res, mastery = evaluate_diagnostic(questions, store)
-        st.session_state["diagnostic_results"] = res
-        st.session_state["mastery_scores"] = mastery
-        if st.session_state.get("initial_mastery") is None:
-            st.session_state["initial_mastery"] = dict(mastery)
-        for k, v in {"study_plan": [], "recovered_plan": None, "session_status": {},
-                     "recovery_preview": None, "recovery_changes": [], "diag_review_sel": 0}.items():
-            st.session_state[k] = v
-        st.rerun()
+        with _card("diagnostic_question", tone="coral"):
+            question_top = st.columns([4, 1], gap="medium", vertical_alignment="center")
+            question_top[0].markdown(
+                f"<div class='rb-diagnostic-v2-number'>Question {step + 1}</div>",
+                unsafe_allow_html=True,
+            )
+            question_top[1].markdown(
+                f"<div class='rb-diagnostic-v2-marks'>{marks_badge}</div>",
+                unsafe_allow_html=True,
+            )
+            st.markdown(
+                f"<div class='rb-diagnostic-v2-question'>{html.escape(str(q['question']))}</div>",
+                unsafe_allow_html=True,
+            )
+            st.markdown(
+                f"<div class='rb-diagnostic-v2-subject'>{_badge('Biology', 'green')}</div>",
+                unsafe_allow_html=True,
+            )
+            key = f"diag_{q['id']}"
+            if key not in st.session_state:
+                st.session_state[key] = store.get(q["id"], "")
+            st.text_area(
+                "Your answer", key=key, height=240, placeholder="Write your answer here...",
+                label_visibility="collapsed",
+            )
+            st.markdown(
+                "<div class='rb-diagnostic-v2-helper'>"
+                f"<span class='rb-diagnostic-v2-helper-icon'>{_icon('info', 16, '#FA855A', 1.8)}</span>"
+                "<span>Use full sentences. You can reference key biological processes "
+                "and examples.</span></div>",
+                unsafe_allow_html=True,
+            )
+
+        def _harvest():
+            store[q["id"]] = st.session_state.get(key, "")
+
+        st.divider()
+        buttons = _responsive_button_row(3, key="diagnostic_navigation")
+        if buttons[0].button(
+            "Previous", key="dq_prev", disabled=(step == 0), use_container_width=True
+        ):
+            _harvest()
+            st.session_state["diag_step"] = step - 1
+            st.rerun()
+        if buttons[1].button(
+            "Next", key="dq_next", disabled=(step == n - 1), use_container_width=True
+        ):
+            _harvest()
+            st.session_state["diag_step"] = step + 1
+            st.rerun()
+        if buttons[2].button(
+            "Finish", type="primary", key="dq_finish", use_container_width=True
+        ):
+            _harvest()
+            res, mastery = evaluate_diagnostic(questions, store)
+            st.session_state["diagnostic_results"] = res
+            st.session_state["mastery_scores"] = mastery
+            if st.session_state.get("initial_mastery") is None:
+                st.session_state["initial_mastery"] = dict(mastery)
+            for k, v in {"study_plan": [], "recovered_plan": None, "session_status": {},
+                         "recovery_preview": None, "recovery_changes": [], "diag_review_sel": 0}.items():
+                st.session_state[k] = v
+            st.rerun()
 
 
 def _q_status(score, marks):
@@ -2719,76 +2761,168 @@ def render_diagnostic_results(questions, results):
     avail = sum(q["marks"] for q in questions)
     pct = earned / avail if avail else 0.0
     sel = max(0, min(st.session_state.get("diag_review_sel", 0), len(questions) - 1))
+    completed = sum(1 for q in questions if q["id"] in results)
+    completion = completed / len(questions) if questions else 0.0
+    q = questions[sel]
+    r = results.get(q["id"], {})
+    answer = st.session_state.get("diag_answers", {}).get(q["id"], "")
+    correct = r.get("correct_concepts") or []
+    missing = r.get("missing_concepts") or []
 
-    with st.container(border=True):
-        h = st.columns([3, 4])
-        with h[0]:
-            _section("Diagnostic Results", "clipboard")
-            st.caption("Review your performance and feedback")
-        h[1].progress(1.0)
+    with _page_shell("diagnostic_results"):
+        with _card("diagnostic_results_header"):
+            header = st.columns([3.2, 2.2], gap="large")
+            with header[0]:
+                _page_header(
+                    "Diagnostic Results",
+                    "Review your performance and AI feedback",
+                    icon_name="clipboard",
+                )
+            with header[1]:
+                _progress_display(
+                    completion,
+                    key="diagnostic_results_completion",
+                    label="Overall completion",
+                    caption=f"{completed} of {len(questions)} questions reviewed",
+                )
 
-    main, side = st.columns([2, 1], gap="large")
-    with side:
-        with st.container(border=True):
-            st.markdown(f"<div class='rb-serif' style='font-size:2.2rem;color:var(--primary)'>{pct:.0%}</div>",
-                        unsafe_allow_html=True)
-            st.caption(f"You got {earned} marks out of {avail}")
-        with st.container(border=True):
-            st.markdown("**Question overview**")
-            st.markdown(
-                _chip("Correct", "rgba(231,241,168,.6)", "#3f6b1f") + " " +
-                _chip("Partially correct", "rgba(255,222,150,.35)", "#7a5a17") + " " +
-                _chip("Incorrect", "rgba(201,54,56,.14)", "#8a1f1f"), unsafe_allow_html=True)
-            for i, q in enumerate(questions):
-                r = results.get(q["id"], {})
-                label, fg, bg, ic = _q_status(r.get("score", 0), q["marks"])
-                mark = "= " if i == sel else "  "
-                if st.button(f"{mark}Question {i + 1} — {r.get('score', 0)}/{q['marks']} · {label}",
-                             key=f"rev_{i}", use_container_width=True):
-                    st.session_state["diag_review_sel"] = i
-                    st.rerun()
-    with main:
-        q = questions[sel]
-        r = results.get(q["id"], {})
-        with st.container(border=True):
-            top = st.columns([3, 1])
-            top[0].markdown(f"<span style='color:var(--primary);font-weight:700'>Question {sel + 1}</span> · "
-                            f"{q['topic']}", unsafe_allow_html=True)
-            top[1].markdown(f"<div style='text-align:right'>{_chip(str(q['marks']) + ' marks', 'rgba(250,133,90,.14)', '#8a3b1e')}</div>",
-                            unsafe_allow_html=True)
-            st.markdown(f"### {q['question']}")
-            st.markdown("**Your answer**")
-            st.write(st.session_state.get("diag_answers", {}).get(q["id"], "") or "_No answer submitted._")
-            cc, mm = st.columns(2)
-            with cc:
-                st.markdown(f"{_icon('check', 16, '#3f6b1f')} **What you got correct**", unsafe_allow_html=True)
-                for c in (r.get("correct_concepts") or ["—"]):
-                    st.markdown(f"- {c}")
-            with mm:
-                st.markdown(f"{_icon('x', 16, '#8a1f1f')} **What marks you missed**", unsafe_allow_html=True)
-                for c in (r.get("missing_concepts") or ["—"]):
-                    st.markdown(f"- {c}")
-            if r.get("misconceptions"):
-                st.markdown("**Misconceptions**")
-                for mcn in r["misconceptions"]:
-                    st.markdown(f"- {mcn}")
-            st.markdown(f"**Score: {r.get('score', 0)} / {q['marks']}** — How to improve")
-            st.write(r.get("improvement", "—"))
-            with st.expander("Mark scheme & expected answer"):
-                st.write("Expected answer: " + (q.get("expected_answer") or "—"))
-                for pt in q.get("mark_scheme", []):
-                    st.markdown(f"- {pt}")
-                st.caption("Semantic concepts: " + (", ".join(q.get("semantic_concepts", [])) or "—"))
+        with st.container(key="rb_results_main_layout"):
+            main, side = st.columns([7, 3], gap="large")
 
-    st.divider()
-    b = st.columns([1, 1, 3])
-    if b[0].button("Retake diagnostic", key="res_retake"):
-        st.session_state["diagnostic_results"] = {}
-        st.session_state["diag_step"] = 0
-        st.session_state["diag_answers"] = {}
-        st.rerun()
-    if b[1].button("View study plan", type="primary", key="res_plan"):
-        _nav_to("Study Plan")
+        with main:
+            with _card("diagnostic_results_review"):
+                top = st.columns([4, 1])
+                with top[0]:
+                    st.markdown(
+                        f"<div class='rb-results-question-number'>Question {sel + 1}</div>",
+                        unsafe_allow_html=True,
+                    )
+                with top[1]:
+                    st.markdown(
+                        "<div class='rb-results-marks'>"
+                        f"{_badge(str(q['marks']) + ' marks', 'coral')}</div>",
+                        unsafe_allow_html=True,
+                    )
+                st.markdown(
+                    f"<div class='rb-results-question'>{html.escape(str(q['question']))}</div>",
+                    unsafe_allow_html=True,
+                )
+                st.markdown(
+                    f"<div class='rb-results-subject'>{_badge(q.get('topic', 'Topic'), 'green')}</div>",
+                    unsafe_allow_html=True,
+                )
+                st.markdown("<div class='rb-results-label'>Your answer</div>", unsafe_allow_html=True)
+                st.markdown(
+                    "<div class='rb-results-answer'>"
+                    f"{html.escape(str(answer)) if answer else '<em>No answer submitted.</em>'}"
+                    "</div>",
+                    unsafe_allow_html=True,
+                )
+
+                feedback = st.columns(2, gap="medium")
+                with feedback[0]:
+                    with _card("diagnostic_results_correct", tone="green"):
+                        st.markdown(
+                            "<div class='rb-results-feedback-title rb-results-feedback-title-green'>"
+                            f"{_icon('check', 17, '#3f6b1f')}<span>What you got correct</span></div>",
+                            unsafe_allow_html=True,
+                        )
+                        if correct:
+                            items = "".join(f"<li>{html.escape(str(item))}</li>" for item in correct)
+                            st.markdown(f"<ul class='rb-results-feedback-list'>{items}</ul>", unsafe_allow_html=True)
+                        else:
+                            st.markdown("<div class='rb-results-empty-feedback'>No feedback returned.</div>", unsafe_allow_html=True)
+                with feedback[1]:
+                    with _card("diagnostic_results_missing", tone="danger"):
+                        st.markdown(
+                            "<div class='rb-results-feedback-title rb-results-feedback-title-danger'>"
+                            f"{_icon('x', 17, '#8a1f1f')}<span>What marks you missed</span></div>",
+                            unsafe_allow_html=True,
+                        )
+                        if missing:
+                            items = "".join(f"<li>{html.escape(str(item))}</li>" for item in missing)
+                            st.markdown(f"<ul class='rb-results-feedback-list'>{items}</ul>", unsafe_allow_html=True)
+                        else:
+                            st.markdown("<div class='rb-results-empty-feedback'>No feedback returned.</div>", unsafe_allow_html=True)
+
+                if r.get("misconceptions"):
+                    misconceptions = "".join(
+                        f"<li>{html.escape(str(item))}</li>" for item in r["misconceptions"]
+                    )
+                    with _card("diagnostic_results_misconceptions", tone="amber"):
+                        st.markdown(
+                            "<div class='rb-results-feedback-title'>Misconceptions</div>"
+                            f"<ul class='rb-results-feedback-list'>{misconceptions}</ul>",
+                            unsafe_allow_html=True,
+                        )
+
+                with st.container(key="rb_results_improvement"):
+                    score_badge = _badge(
+                        f"Score: {r.get('score', 0)} / {q['marks']}", "green"
+                    )
+                    st.markdown(
+                        "<div class='rb-results-score-line'>"
+                        f"{score_badge}"
+                        f"<span>{_icon('info', 17, '#FA855A')}<strong>How to improve</strong></span>"
+                        "</div>",
+                        unsafe_allow_html=True,
+                    )
+                    if r.get("improvement"):
+                        st.markdown(
+                            f"<div class='rb-results-improvement-copy'>{html.escape(str(r['improvement']))}</div>",
+                            unsafe_allow_html=True,
+                        )
+
+                with st.expander("Mark scheme & expected answer"):
+                    st.write("Expected answer: " + (q.get("expected_answer") or "—"))
+                    for pt in q.get("mark_scheme", []):
+                        st.markdown(f"- {pt}")
+                    st.caption(
+                        "Semantic concepts: "
+                        + (", ".join(q.get("semantic_concepts", [])) or "—")
+                    )
+
+        with side:
+            with _sidebar_insight_card("diagnostic_results_score", tone="coral"):
+                st.markdown(
+                    f"<div class='rb-results-overall-score'>{pct:.0%}</div>"
+                    f"<div class='rb-results-overall-caption'>{earned} marks earned out of {avail}</div>",
+                    unsafe_allow_html=True,
+                )
+            with _sidebar_insight_card("diagnostic_results_overview"):
+                st.markdown("<div class='rb-results-overview-title'>Question overview</div>", unsafe_allow_html=True)
+                st.markdown(
+                    "<div class='rb-results-legend'>"
+                    "<span><i class='green'></i>Correct</span>"
+                    "<span><i class='amber'></i>Partially correct</span>"
+                    "<span><i class='red'></i>Incorrect</span></div>",
+                    unsafe_allow_html=True,
+                )
+                for i, question in enumerate(questions):
+                    result = results.get(question["id"], {})
+                    label, fg, bg, ic = _q_status(result.get("score", 0), question["marks"])
+                    tone = "green" if label == "Correct" else "danger" if label == "Incorrect" else "amber"
+                    selected = "selected" if i == sel else "idle"
+                    with st.container(key=f"rb_result_overview_{tone}_{selected}_{i}"):
+                        if st.button(
+                            f"Question {i + 1} — {result.get('score', 0)}/{question['marks']} · {label}",
+                            key=f"rev_{i}",
+                            use_container_width=True,
+                        ):
+                            st.session_state["diag_review_sel"] = i
+                            st.rerun()
+
+        st.divider()
+        b = _responsive_button_row(2, key="diagnostic_results_actions")
+        if b[0].button("Retake diagnostic", key="res_retake", use_container_width=True):
+            st.session_state["diagnostic_results"] = {}
+            st.session_state["diag_step"] = 0
+            st.session_state["diag_answers"] = {}
+            st.rerun()
+        if b[1].button(
+            "View study plan", type="primary", key="res_plan", use_container_width=True
+        ):
+            _nav_to("Study Plan")
 
 
 def page_diagnostic():

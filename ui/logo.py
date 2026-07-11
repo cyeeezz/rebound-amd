@@ -1,11 +1,13 @@
 """Rebound brand lockup."""
 
+from __future__ import annotations
+
 import streamlit as st
 
 from .theme import PALETTE
 
 
-def render_rebound_logo(compact=False):
+def render_rebound_logo(compact: bool = False) -> str:
     """Return the official Rebound lockup as clean inline SVG."""
     dark = st.session_state.get("theme") == "dark"
     word = "#F7F8FA" if dark else "#17233A"

@@ -1,7 +1,11 @@
 """Inline SVG icon helpers for the Rebound interface."""
 
+from __future__ import annotations
 
-ICON_PATHS = {
+import html
+
+
+ICON_PATHS: dict[str, str] = {
     "home": "M3 10.5 12 3l9 7.5M5 9.5V21h14V9.5",
     "settings": "M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM19 12a7 7 0 0 0-.1-1l2-1.6-2-3.4-2.4 1a7 7 0 0 0-1.7-1L14.5 2h-5l-.3 3a7 7 0 0 0-1.7 1l-2.4-1-2 3.4L2.1 11a7 7 0 0 0 0 2l-2 1.6 2 3.4 2.4-1a7 7 0 0 0 1.7 1l.3 3h5l.3-3a7 7 0 0 0 1.7-1l2.4 1 2-3.4-2-1.6a7 7 0 0 0 .1-1Z",
     "book": "M4 4h9a3 3 0 0 1 3 3v13a3 3 0 0 0-3-3H4ZM20 4h-4a3 3 0 0 0-3 3v13a3 3 0 0 1 3-3h4Z",
@@ -20,12 +24,13 @@ ICON_PATHS = {
 }
 
 
-def icon(name, size=18, stroke="currentColor", sw=2):
+def icon(name: str, size: int = 18, stroke: str = "currentColor", sw: float = 2) -> str:
     """Return a lucide-style inline SVG icon."""
     path = ICON_PATHS.get(name, "")
+    safe_stroke = html.escape(stroke, quote=True)
     return (
         f"<svg width='{size}' height='{size}' viewBox='0 0 24 24' fill='none' "
-        f"stroke='{stroke}' stroke-width='{sw}' stroke-linecap='round' "
+        f"stroke='{safe_stroke}' stroke-width='{sw}' stroke-linecap='round' "
         f"stroke-linejoin='round' aria-hidden='true' style='vertical-align:-3px'>"
         f"<path d='{path}'/></svg>"
     )
