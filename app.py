@@ -34,6 +34,7 @@ from ui.components import (
 )
 from ui.icons import ICON_PATHS as _ICON_PATHS
 from ui.icons import icon as _icon
+from utils import amd_loader as _amd
 from ui.logo import render_rebound_logo
 from ui.theme import PALETTE as _PALETTE
 from ui.theme import inject_css as _inject_css
@@ -154,6 +155,10 @@ _STOPWORDS = {
 # Shared difficulty / marking scales used by the diagnostic and planner.
 DIFFICULTY_RANK = {"Easy": 1, "Medium": 2, "Hard": 3}
 MARKS_BY_DIFFICULTY = {"Easy": [2, 3], "Medium": [3, 4], "Hard": [4, 5]}
+
+# Reject oversized uploads early (defence-in-depth alongside Streamlit's own
+# server.maxUploadSize limit configured in .streamlit/config.toml).
+MAX_UPLOAD_BYTES = 25 * 1024 * 1024  # 25 MB
 
 
 def _read_pdf(uploaded_file) -> tuple[str, int]:
@@ -1294,7 +1299,7 @@ def load_precomputed_artifacts(folder: str = ".") -> dict:
     if os.path.exists(emb):
         try:
             import numpy as _np  # optional dependency
-            out["embeddings"] = _np.load(emb)
+            out["embeddings"] = _np.load(emb, allow_pickle=False)
         except Exception as exc:
             print(f"[Rebound] embeddings.npy load failed: {exc}")
     return out
@@ -2073,6 +2078,19 @@ _UI_DEFAULTS = {
 for _k, _v in _UI_DEFAULTS.items():
     st.session_state.setdefault(_k, _v)
 
+def _reset_session():
+    """Wipe uploaded content and derived state (privacy / session cleanup).
+
+    Removes the uploaded document text and every derived artifact from the
+    session so notes are not retained after the user is finished. Display-only
+    preferences (e.g. theme) are preserved; module-level defaults are
+    re-applied automatically on the next rerun.
+    """
+    for k in [key for key in st.session_state.keys() if key != "theme"]:
+        del st.session_state[k]
+    st.rerun()
+
+
 def _nav_to(page):
     if page == "Setup" and st.session_state.get("sections"):
         st.session_state["_setup_reentry"] = True
@@ -2301,6 +2319,13 @@ def render_today_session_card(session, status, all_days, expanded=False, keypref
 # Setup (split-screen)
 # ---------------------------------------------------------------------------
 def _run_analysis(pdf, subject, exam_date, daily):
+    size = getattr(pdf, "size", None)
+    if size is not None and size > MAX_UPLOAD_BYTES:
+        st.error(
+            f"That file is {size / 1_048_576:.1f} MB. Please upload a PDF under "
+            f"{MAX_UPLOAD_BYTES // 1_048_576} MB."
+        )
+        return
     st.session_state["subject"] = subject
     st.session_state["exam_date"] = exam_date
     st.session_state["daily_study_time"] = daily
@@ -2324,7 +2349,9 @@ def _run_analysis(pdf, subject, exam_date, daily):
                 st.error("AI analysis returned an invalid response. Please try again.")
             else:
                 box.update(label="Fireworks request failed", state="error")
-                st.error(f"Fireworks request failed: {exc}")
+                # Full detail is already logged server-side above; keep the
+                # user-facing message generic so internals are not exposed.
+                st.error("The AI analysis service could not be reached. Please try again.")
             st.info("Set DEBUG_OFFLINE=1 to use local analysis for offline development.")
             return
         sections = parse_fireworks_response(raw)
@@ -2405,12 +2432,23 @@ def render_setup_split_layout():
                     daily = st.number_input("Daily study time (hours)", 0.5, 12.0,
                                             float(st.session_state.get("daily_study_time", 2.0)), 0.5)
                     pdf = st.file_uploader("Upload notes (PDF)", type=["pdf"])
+                    consent = st.checkbox(
+                        "I consent to my uploaded notes being processed and sent to "
+                        "Fireworks AI to build my study plan.",
+                        key="fireworks_consent",
+                    )
+                    st.caption(
+                        "Files are processed in memory for this session and are not shared "
+                        "otherwise. Use \u201cClear data\u201d at any time to remove them."
+                    )
                     go = st.form_submit_button(
                         "Upload and analyse notes", type="primary", use_container_width=True
                     )
                 if go:
                     if pdf is None:
                         st.warning("Please upload a PDF before analysing.")
+                    elif not consent:
+                        st.warning("Please provide consent before your notes are analysed.")
                     else:
                         _run_analysis(pdf, subject, exam_date, daily)
                 if st.session_state.get("sections"):
@@ -2856,6 +2894,50 @@ def page_knowledge_map():
     else:
         render_relationship_canvas(sections, graph)
 
+    _render_amd_semantic_relationships()
+
+
+def _render_amd_semantic_relationships():
+    """Show AMD-computed semantic similarity between topics (max 10 pairs).
+
+    Semantic similarity is a supplementary signal produced by the AMD ROCm
+    embedding notebook. It is NOT a prerequisite relationship and never
+    replaces the prerequisite graph used for planning.
+    """
+    relationships = _amd.get_semantic_relationships()
+    if not relationships:
+        return
+    st.markdown("""
+    <style>
+    .rb-sem-head{display:flex;align-items:center;gap:9px;margin:.2rem 0 .3rem;color:#17233A;font-weight:800;font-size:1.05rem;}
+    .rb-sem-sub{margin-bottom:.9rem;color:#667085;font-size:.8rem;line-height:1.5;}
+    .rb-sem-row{display:grid;grid-template-columns:minmax(0,1fr) 24px minmax(0,1fr) 92px;align-items:center;gap:10px;
+      padding:.55rem .8rem;border:1px solid var(--rb-neutral-border);border-radius:12px;margin-bottom:8px;background:rgba(255,255,255,.94);}
+    .rb-sem-topic{min-width:0;color:#17233A;font-weight:700;font-size:.82rem;overflow-wrap:anywhere}
+    .rb-sem-link{color:#98A2B3;text-align:center;font-weight:800}
+    .rb-sem-score{justify-self:end;padding:3px 9px;border-radius:999px;background:#EDEBFB;color:#4a3aa0;font-weight:800;font-size:.76rem;}
+    @media(max-width:560px){.rb-sem-row{grid-template-columns:minmax(0,1fr) 18px minmax(0,1fr) 66px}}
+    </style>""", unsafe_allow_html=True)
+    with st.container(border=True, key="rb_amd_semantic"):
+        st.markdown(
+            f"<div class='rb-sem-head'>{_icon('compare', 19, '#5b3ca0', 2)}"
+            "<span>AMD Semantic Relationships</span></div>"
+            "<div class='rb-sem-sub'>Topic-to-topic similarity computed on AMD Radeon GPU hardware "
+            "(PyTorch ROCm, SentenceTransformer embeddings). Supplements \u2014 but does not replace \u2014 "
+            "the prerequisite graph.</div>",
+            unsafe_allow_html=True,
+        )
+        for rel in relationships[:10]:
+            pct = max(0.0, min(1.0, rel["similarity"]))
+            st.markdown(
+                "<div class='rb-sem-row'>"
+                f"<span class='rb-sem-topic'>{html.escape(rel['source'])}</span>"
+                "<span class='rb-sem-link'>\u2194</span>"
+                f"<span class='rb-sem-topic'>{html.escape(rel['target'])}</span>"
+                f"<span class='rb-sem-score'>{pct * 100:.0f}%</span></div>",
+                unsafe_allow_html=True,
+            )
+
 
 # ---------------------------------------------------------------------------
 # Diagnostic (question view + results view)
@@ -3135,8 +3217,9 @@ def page_diagnostic():
         try:
             st.session_state["diagnostic_questions"] = generate_exam_questions(sections)
         except Exception as exc:
+            print(f"[Rebound] Diagnostic generation failed: {type(exc).__name__}: {exc}")
             _page_title("Diagnostic", "clipboard")
-            st.error(f"Fireworks question generation failed: {exc}")
+            st.error("Question generation failed. Please try again.")
             st.info("Set DEBUG_OFFLINE=1 to use the local generator for offline development.")
             return
     questions = st.session_state["diagnostic_questions"]
@@ -3701,6 +3784,138 @@ def page_progress():
 # ---------------------------------------------------------------------------
 # About Rebound (split-screen, mirrors Setup)
 # ---------------------------------------------------------------------------
+def _about_evidence_rows(rows):
+    """Render (label, value, icon, tone) evidence rows with escaped values."""
+    for label, value, icon_name, tone in rows:
+        st.markdown(
+            "<div class='rb-about-evidence-row'>"
+            f"<span class='rb-about-evidence-icon {tone}'>{_icon(icon_name, 17, 'currentColor', 2)}</span>"
+            f"<span class='rb-about-evidence-label'>{html.escape(str(label))}</span>"
+            f"<span class='rb-about-evidence-value'>{html.escape(str(value))}</span></div>",
+            unsafe_allow_html=True,
+        )
+
+
+def _render_amd_execution_evidence():
+    """Verified AMD GPU Execution panel, sourced from the notebook manifest.
+
+    Reports the embedding/relationship workload only; it never implies that
+    Fireworks inference ran inside the AMD notebook.
+    """
+    verified = _amd.is_verified_amd_run()
+    manifest = _amd.load_amd_manifest()
+    badge_tone, badge_label = (
+        ("success", "Verified AMD GPU Execution") if verified
+        else ("warning", "Unverified")
+    )
+    with st.expander("Verified AMD GPU Execution", expanded=True):
+        st.markdown(
+            f"<span class='rb-amd-status rb-amd-status-{badge_tone}'>"
+            f"{_icon('check' if verified else 'info', 14, 'currentColor', 2.2)}"
+            f"{html.escape(badge_label)}</span>",
+            unsafe_allow_html=True,
+        )
+        if not verified or not manifest:
+            st.info("AMD notebook evidence unavailable.")
+            return
+        duration = manifest.get("execution_seconds")
+        try:
+            duration_txt = f"{float(duration):.3f} s" if duration is not None else "Not captured"
+        except (TypeError, ValueError):
+            duration_txt = "Not captured"
+        rows = [
+            ("Status", "Completed", "check", "success"),
+            ("ROCm HIP version", manifest.get("rocm_hip_version", "Not captured"), "settings", "neutral"),
+            ("PyTorch version", manifest.get("torch_version", "Not captured"), "settings", "neutral"),
+            ("Model ID", manifest.get("model_id", "Not captured"), "zap", "neutral"),
+            ("Notebook path", manifest.get("notebook_path", "Not captured"), "book", "neutral"),
+            ("Topic count", manifest.get("topic_count", "Not captured"), "clipboard", "neutral"),
+            ("Embedding dimensions", manifest.get("embedding_dimensions", "Not captured"), "chart", "neutral"),
+            ("Relationship count", manifest.get("relationship_count", "Not captured"), "compare", "neutral"),
+            ("Execution timestamp", manifest.get("execution_timestamp_utc", "Not captured"), "clock", "neutral"),
+            ("Execution duration", duration_txt, "clock", "neutral"),
+            ("Operation", manifest.get("operation", "Not captured"), "info", "neutral"),
+            ("Input source", manifest.get("input_source", "Not captured"), "upload", "neutral"),
+        ]
+        _about_evidence_rows(rows)
+        st.markdown(
+            f"<div class='rb-about-evidence-note'>{_icon('info', 14, '#667085', 2)}"
+            "<span>Metadata captured by the AMD ROCm notebook that generated the semantic "
+            "embeddings. This runtime is independent of Fireworks inference.</span></div>",
+            unsafe_allow_html=True,
+        )
+
+
+def _render_fireworks_runtime_evidence(has_evidence, provider, returned_model,
+                                       operation, inference_status,
+                                       local_fallback, src, cs):
+    """Fireworks Runtime panel — a completely separate section from AMD.
+
+    Reports only the language-model inference captured by the app. It does not
+    imply this inference ran on AMD hardware or inside the notebook.
+    """
+    with st.expander("Fireworks Runtime", expanded=False):
+        if not has_evidence:
+            st.info("Analyse a document in Setup to populate Fireworks runtime evidence.")
+        else:
+            rows = [
+                ("Provider", provider, "info", "neutral"),
+                ("Returned model", returned_model, "settings", "neutral"),
+                ("Operation", operation, "clipboard", "neutral"),
+                ("Inference status", inference_status,
+                 "check" if inference_status == "Completed" else "info",
+                 "success" if inference_status == "Completed" else "warning"),
+                ("Local fallback", local_fallback, "recovery",
+                 "warning" if local_fallback != "No" else "neutral"),
+            ]
+            if src:
+                rows.append(("Analysis source", src, "compare", "neutral"))
+            if cs.get("analysis_time"):
+                rows.append(("Analysis time", cs["analysis_time"], "clock", "neutral"))
+            _about_evidence_rows(rows)
+        st.markdown(
+            f"<div class='rb-about-evidence-note'>{_icon('info', 14, '#667085', 2)}"
+            "<span>Fireworks AI performs the natural-language extraction only. It is a "
+            "separate runtime from the AMD GPU notebook shown above.</span></div>",
+            unsafe_allow_html=True,
+        )
+
+
+# Data-flow nodes for the architecture diagram. Each node is tagged with the
+# runtime that owns it so the two pipelines are visually distinguishable.
+_ARCH_NODES = [
+    ("User Upload", "neutral"),
+    ("Fireworks AI Extraction", "fw"),
+    ("Knowledge Map", "hub"),
+    ("AMD GPU Notebook", "amd"),
+    ("Sentence Transformer", "amd"),
+    ("Semantic Embeddings", "amd"),
+    ("Semantic Relationships", "amd"),
+    ("Knowledge Graph Enhancement", "amd"),
+]
+
+
+def _render_architecture_diagram():
+    """Render the Rebound data-flow architecture as a vertical node graph."""
+    with st.expander("Architecture", expanded=False):
+        parts = []
+        for i, (label, tone) in enumerate(_ARCH_NODES):
+            # The AMD pipeline feeds up into the Knowledge Map; show that edge.
+            connector = "\u2191" if label == "AMD GPU Notebook" else "\u2193"
+            if i:
+                parts.append(f"<div class='rb-arch-arrow'>{connector}</div>")
+            parts.append(
+                f"<div class='rb-arch-node rb-arch-{tone}'>{html.escape(label)}</div>"
+            )
+        st.markdown(
+            "<div class='rb-arch-flow'>" + "".join(parts) + "</div>",
+            unsafe_allow_html=True,
+        )
+
+
+# ---------------------------------------------------------------------------
+# About Rebound (split-screen, mirrors Setup)
+# ---------------------------------------------------------------------------
 def render_about_split_layout():
     cs = st.session_state.get("compute_status", {})
     fm = st.session_state.get("fireworks_model", {})
@@ -3747,6 +3962,16 @@ def render_about_split_layout():
     .rb-about-evidence-icon.success{color:#4A8B38}.rb-about-evidence-icon.warning{color:#C27C16}.rb-about-evidence-label{color:#17233A;font-weight:790;}
     .rb-about-evidence-value{min-width:0;color:#475467;overflow-wrap:anywhere;word-break:break-word}.rb-about-evidence-note{display:flex;align-items:flex-start;gap:8px;
       margin-top:.9rem;color:#667085;font-size:.7rem;line-height:1.5;}
+    .rb-amd-status{display:inline-flex;align-items:center;gap:6px;margin-bottom:.85rem;padding:5px 11px;border-radius:999px;
+      font-size:.72rem;font-weight:800;letter-spacing:.01em;}
+    .rb-amd-status-success{background:#E8F7DE;color:#3f6b1f}.rb-amd-status-warning{background:#FFF2CC;color:#8a6817}
+    .rb-arch-flow{display:flex;flex-direction:column;align-items:center;gap:2px;padding:.4rem 0}
+    .rb-arch-node{width:100%;max-width:340px;text-align:center;padding:.6rem .8rem;border-radius:12px;font-size:.8rem;font-weight:760;
+      border:1px solid rgba(229,232,239,.9);color:#17233A;background:#fff;}
+    .rb-arch-node.rb-arch-fw{background:#FFF2CC;border-color:#F1DFA8;color:#8a6817}
+    .rb-arch-node.rb-arch-hub{background:#E7F4FA;border-color:#C7E6F0;color:#0d5c6e}
+    .rb-arch-node.rb-arch-amd{background:#EDEBFB;border-color:#D6CFF4;color:#4a3aa0}
+    .rb-arch-arrow{color:#98A2B3;font-size:1rem;line-height:1;font-weight:800}
     @media(max-width:850px){[class*="st-key-rb_about_columns"]>div>[data-testid="stHorizontalBlock"]{flex-direction:column}
       [class*="st-key-rb_about_columns"]>div>[data-testid="stHorizontalBlock"]>[data-testid="stColumn"]{width:100%!important;flex:1 1 100%!important}
       [class*="st-key-rb_about_shell"]{padding:1.2rem;border-radius:22px}.rb-about-brand{margin-bottom:1.5rem}}
@@ -3767,7 +3992,7 @@ def render_about_split_layout():
             features = [
                 ("calendar", "green", "Adaptive planning", "Plans adapt to progress, available time, and schedule changes."),
                 ("zap", "amber", "AI-powered analysis", "Extracts key topics, concepts, and relationships from uploaded notes."),
-                ("settings", "blue", "AMD-ready architecture", "Designed so heavier local compute can move to AMD ROCm-compatible hardware."),
+                ("settings", "blue", "Verified AMD GPU Execution", "Semantic embeddings and topic relationships are computed on AMD Radeon GPU hardware with PyTorch ROCm."),
             ]
             feature_html = "".join(
                 "<div class='rb-about-feature'>"
@@ -3784,41 +4009,15 @@ def render_about_split_layout():
             with _card("about_evidence"):
                 st.markdown(
                     "<div class='rb-about-card-title-row'><div class='rb-about-card-title'>About Rebound</div></div>"
-                    "<div class='rb-about-card-copy'>Uploaded notes become an adaptive study plan. Current language tasks run through Fireworks AI when configured; local heuristics are used only when the recorded source identifies a fallback. The architecture is designed to support future heavier local compute on AMD ROCm-compatible hardware.</div>",
+                    "<div class='rb-about-card-copy'>Uploaded notes become an adaptive study plan. Language analysis runs through Fireworks AI, while semantic embeddings and topic relationships are computed on AMD Radeon GPU hardware (PyTorch ROCm) and loaded from verified notebook artifacts. The two runtimes are independent.</div>",
                     unsafe_allow_html=True,
                 )
-                with st.expander("AMD Compute Evidence", expanded=True):
-                    if not has_evidence:
-                        st.info("Analyse a document in Setup to populate runtime evidence.")
-                    else:
-                        rows = [
-                            ("Provider", provider, "info", "neutral"),
-                            ("Returned model", returned_model, "settings", "neutral"),
-                            ("Operation", operation, "clipboard", "neutral"),
-                            ("Request ID", "Not captured", "info", "warning"),
-                            ("Token usage", "Not captured", "chart", "warning"),
-                            ("Inference status", inference_status, "check" if inference_status == "Completed" else "info",
-                             "success" if inference_status == "Completed" else "warning"),
-                            ("Local fallback", local_fallback, "recovery", "warning" if local_fallback != "No" else "neutral"),
-                        ]
-                        if src:
-                            rows.append(("Analysis source", src, "compare", "neutral"))
-                        if cs.get("analysis_time"):
-                            rows.append(("Analysis time", cs["analysis_time"], "clock", "neutral"))
-                        for label, value, icon_name, tone in rows:
-                            safe_value = html.escape(str(value))
-                            st.markdown(
-                                "<div class='rb-about-evidence-row'>"
-                                f"<span class='rb-about-evidence-icon {tone}'>{_icon(icon_name, 17, 'currentColor', 2)}</span>"
-                                f"<span class='rb-about-evidence-label'>{html.escape(label)}</span>"
-                                f"<span class='rb-about-evidence-value'>{safe_value}</span></div>",
-                                unsafe_allow_html=True,
-                            )
-                    st.markdown(
-                        f"<div class='rb-about-evidence-note'>{_icon('info', 14, '#667085', 2)}"
-                        "<span>Only runtime metadata captured by the application is shown. AMD-ready describes the architecture, not confirmed AMD hardware execution.</span></div>",
-                        unsafe_allow_html=True,
-                    )
+                _render_amd_execution_evidence()
+                _render_fireworks_runtime_evidence(
+                    has_evidence, provider, returned_model, operation,
+                    inference_status, local_fallback, src, cs,
+                )
+                _render_architecture_diagram()
 
 
 def page_about():
@@ -3848,9 +4047,13 @@ def render_topbar():
                         unsafe_allow_html=True)
         with right:
             cur = st.session_state.get("theme", "light")
-            if st.button("Dark mode" if cur == "light" else "Light mode", key="theme_toggle"):
+            tcol, rcol = st.columns(2)
+            if tcol.button("Dark mode" if cur == "light" else "Light mode", key="theme_toggle"):
                 st.session_state["theme"] = "dark" if cur == "light" else "light"
                 st.rerun()
+            if rcol.button("Clear data", key="reset_session",
+                           help="Remove your uploaded notes and reset this session."):
+                _reset_session()
         st.radio("Navigate", PAGES, key="nav_radio", horizontal=True,
                  format_func=lambda p: (p + " (locked)" if _lock_message(p) else p),
                  label_visibility="collapsed")

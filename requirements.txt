@@ -1,5 +1,6 @@
 # Rebound dependencies
 streamlit>=1.36
+numpy>=1.24          # load AMD embedding artifacts (embeddings.npy)
 openai>=1.30          # Fireworks-compatible client (text analysis + vision OCR)
 pdfplumber>=0.11      # primary PDF text extraction
 PyMuPDF>=1.24         # fallback PDF text extraction

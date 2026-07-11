@@ -1,0 +1,8 @@
+# Rebound Streamlit configuration.
+[server]
+# Cap uploads server-side (defence-in-depth with MAX_UPLOAD_BYTES in app.py).
+maxUploadSize = 25
+enableXsrfProtection = true
+
+[browser]
+gatherUsageStats = false

@@ -83,9 +83,7 @@ _OCR_TEXT_THRESHOLD = 50
 # otherwise the real error is surfaced to the user (no hidden fallback).
 DEBUG_OFFLINE = os.getenv("DEBUG_OFFLINE", "0").lower() not in ("0", "", "false", "no")
 
-# API key resolution order: st.secrets -> env -> last-resort default below.
-_FIREWORKS_API_KEY_DEFAULT = "fw_DxfQhZSsKC6D9cM7VCxQJS"
-
+# API key resolution order: st.secrets -> env var only. Never hardcoded.
 # DeepSeek V4 Pro has a 1M-token context, so we DO NOT truncate at 12k: the
 # whole document is sent. Very large documents are split into chunks that are
 # analysed individually and merged (see analyze_document_with_fireworks).
@@ -94,13 +92,24 @@ _FIREWORKS_CHUNK_CHARS = 40_000
 
 
 def _get_fireworks_api_key() -> str:
-    """Resolve the Fireworks API key: st.secrets -> env var -> default."""
+    """Resolve the Fireworks API key from st.secrets or the environment only.
+
+    Never returns a hardcoded key. Raises a clear configuration error if unset.
+    """
     try:
         if "FIREWORKS_API_KEY" in st.secrets:
-            return st.secrets["FIREWORKS_API_KEY"]
+            key = st.secrets["FIREWORKS_API_KEY"]
+            if key:
+                return key
     except Exception:
         pass  # no secrets.toml configured
-    return os.getenv("FIREWORKS_API_KEY", _FIREWORKS_API_KEY_DEFAULT)
+    key = os.getenv("FIREWORKS_API_KEY")
+    if key:
+        return key
+    raise RuntimeError(
+        "FIREWORKS_API_KEY is not configured. Add it to .streamlit/secrets.toml "
+        "or set the FIREWORKS_API_KEY environment variable."
+    )
 
 _STOPWORDS = {
     "the", "and", "for", "are", "but", "not", "you", "all", "any", "can",
