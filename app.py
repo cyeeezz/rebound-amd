@@ -3564,47 +3564,124 @@ def page_progress():
 # About Rebound (split-screen, mirrors Setup)
 # ---------------------------------------------------------------------------
 def render_about_split_layout():
-    left, right = st.columns([1, 1], gap="large")
-    with left:
-        st.markdown(render_rebound_logo(), unsafe_allow_html=True)
-        st.markdown(f"<div style='margin:14px 0'>{_chip('About Rebound', 'rgba(250,133,90,.14)', '#8a3b1e')}</div>",
-                    unsafe_allow_html=True)
-        st.markdown("<div class='rb-hero'>How Rebound helps<br>you recover and<br>perform your best.</div>",
-                    unsafe_allow_html=True)
-        st.write("Rebound turns your revision notes into a calm, adaptive study plan and helps you "
-                 "recover when life gets in the way. Language tasks run on Fireworks AI; the "
-                 "architecture is designed to move heavier compute to local AMD ROCm hardware.")
-        f = st.columns(3)
-        for col, (t, d) in zip(f, [
-                ("Adaptive planning", "Plans adapt to your progress, schedule, and available time."),
-                ("AI-powered analysis", "Rebound extracts key topics and concepts from your notes."),
-                ("AMD-ready architecture", "Structured to support heavier local compute workflows.")]):
-            col.markdown(f"<div class='rb-feat'>{t}</div>", unsafe_allow_html=True)
-            col.caption(d)
-    with right:
-        with st.container(border=True):
-            _page_title("About Rebound", "info")
-            st.write("Rebound turns your revision notes into a calm, adaptive study plan and helps you "
-                     "recover when life gets in the way.")
-            with st.expander("AMD Compute Evidence", expanded=True):
-                cs = st.session_state.get("compute_status", {})
-                fm = st.session_state.get("fireworks_model", {})
-                src = st.session_state.get("analysis_source", "")
-                if not cs and not fm:
-                    st.info("Run an analysis in Setup to populate runtime metadata.")
-                else:
-                    rows = [("Provider", cs.get("provider", "Fireworks AI")),
-                            ("Returned model", fm.get("id") or fm.get("display") or "—"),
-                            ("Operation", "document analysis / exam generation"),
-                            ("Request ID", "Not captured by the client"),
-                            ("Token usage", "Not captured by the client"),
-                            ("Inference status", cs.get("inference_status", "—")),
-                            ("Local fallback", "yes" if str(src).startswith("fallback") else "no")]
-                    for label, value in rows:
-                        c = st.columns([1, 2])
-                        c[0].markdown(f"**{label}**")
-                        c[1].write(value)
-                st.caption("Only real runtime metadata is shown; nothing is hardcoded as successful.")
+    cs = st.session_state.get("compute_status", {})
+    fm = st.session_state.get("fireworks_model", {})
+    src = st.session_state.get("analysis_source", "")
+    has_evidence = bool(cs or fm or src)
+    provider = cs.get("provider") or "Not captured"
+    returned_model = fm.get("id") or fm.get("display") or cs.get("model") or "Not captured"
+    operation = "Document analysis" if has_evidence else "Not captured"
+    inference_status = cs.get("inference_status") or "Not captured"
+    if str(src).startswith("fallback"):
+        local_fallback = "Yes"
+    elif src == "fireworks-api":
+        local_fallback = "No"
+    else:
+        local_fallback = "Not captured"
+
+    st.markdown("""
+    <style>
+    [class*="st-key-rb_about_shell"]{position:relative;max-width:1500px;margin:1rem auto 2rem;padding:clamp(1.2rem,3vw,2.7rem);
+      overflow:hidden;border:1px solid rgba(255,255,255,.84);border-radius:28px;background:
+      radial-gradient(520px 390px at -5% 105%,rgba(250,133,90,.15),transparent 67%),
+      radial-gradient(520px 390px at 103% -6%,rgba(98,196,218,.17),transparent 65%),
+      radial-gradient(440px 330px at 5% -7%,rgba(232,247,222,.72),transparent 62%),#FFFCF8;
+      box-shadow:0 24px 70px rgba(23,35,58,.105);}
+    .rb-about-brand{margin-bottom:2.7rem}.rb-about-kicker{display:inline-flex;align-items:center;gap:7px;margin-bottom:1.25rem;
+      padding:7px 11px;border-radius:9px;background:rgba(250,133,90,.13);color:#8a3b1e;font-size:.75rem;font-weight:780;}
+    .rb-about-headline{max-width:520px;margin-bottom:1.1rem;font-family:Georgia,'Times New Roman',serif;color:#17233A;
+      font-size:clamp(2.15rem,4vw,3.45rem);font-weight:750;line-height:1.08;letter-spacing:-.035em;}
+    .rb-about-copy{max-width:555px;margin-bottom:2rem;color:#667085;font-size:.95rem;line-height:1.72;}
+    .rb-about-features{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}.rb-about-feature{min-width:0;}
+    .rb-about-feature-icon{display:flex;align-items:center;justify-content:center;width:44px;height:44px;margin-bottom:.75rem;border-radius:12px;}
+    .rb-about-feature-icon.green{background:#E8F7DE;color:#4A8B38}.rb-about-feature-icon.amber{background:#FFF2CC;color:#A6760A}
+    .rb-about-feature-icon.blue{background:#E7F4FA;color:#287D94}.rb-about-feature-title{margin-bottom:.35rem;color:#17233A;font-size:.82rem;font-weight:820;}
+    .rb-about-feature-copy{color:#667085;font-size:.73rem;line-height:1.55}.rb-about-footer{margin-top:2.4rem;padding-top:1rem;border-top:1px solid rgba(229,232,239,.8);
+      color:#667085;font-size:.75rem;}
+    [class*="st-key-rb_card_neutral_about_evidence"]{padding:clamp(1.15rem,2.5vw,2rem);border:1px solid var(--rb-neutral-border);
+      border-radius:22px;background:rgba(255,255,255,.96);box-shadow:0 16px 42px rgba(23,35,58,.075);}
+    .rb-about-card-title-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:.7rem}.rb-about-card-title{font-family:Georgia,'Times New Roman',serif;
+      color:#17233A;font-size:clamp(1.55rem,2.5vw,2rem);font-weight:750}.rb-about-card-copy{margin-bottom:1.2rem;color:#667085;font-size:.86rem;line-height:1.65;}
+    [class*="st-key-rb_card_neutral_about_evidence"] [data-testid="stExpander"]{border:1px solid var(--rb-neutral-border);border-radius:16px;overflow:hidden;background:#fff;}
+    .rb-about-evidence-row{display:grid;grid-template-columns:28px minmax(120px,.8fr) minmax(0,1.5fr);align-items:center;gap:10px;
+      padding:.78rem .2rem;border-bottom:1px solid rgba(229,232,239,.82);font-size:.78rem;}
+    .rb-about-evidence-row:last-child{border-bottom:0}.rb-about-evidence-icon{display:flex;align-items:center;justify-content:center;color:#667085;}
+    .rb-about-evidence-icon.success{color:#4A8B38}.rb-about-evidence-icon.warning{color:#C27C16}.rb-about-evidence-label{color:#17233A;font-weight:790;}
+    .rb-about-evidence-value{min-width:0;color:#475467;overflow-wrap:anywhere;word-break:break-word}.rb-about-evidence-note{display:flex;align-items:flex-start;gap:8px;
+      margin-top:.9rem;color:#667085;font-size:.7rem;line-height:1.5;}
+    @media(max-width:850px){[class*="st-key-rb_about_columns"]>div>[data-testid="stHorizontalBlock"]{flex-direction:column}
+      [class*="st-key-rb_about_columns"]>div>[data-testid="stHorizontalBlock"]>[data-testid="stColumn"]{width:100%!important;flex:1 1 100%!important}
+      [class*="st-key-rb_about_shell"]{padding:1.2rem;border-radius:22px}.rb-about-brand{margin-bottom:1.5rem}}
+    @media(max-width:580px){.rb-about-features{grid-template-columns:1fr}.rb-about-evidence-row{grid-template-columns:24px 1fr}
+      .rb-about-evidence-value{grid-column:2}.rb-about-headline{font-size:2.15rem}}
+    </style>""", unsafe_allow_html=True)
+
+    with st.container(key="rb_about_shell"):
+        with st.container(key="rb_about_columns"):
+            left, right = st.columns([.44, .56], gap="large", vertical_alignment="center")
+        with left:
+            st.markdown(f"<div class='rb-about-brand'>{render_rebound_logo()}</div>", unsafe_allow_html=True)
+            st.markdown(
+                f"<div class='rb-about-kicker'>{_icon('info', 15, '#8a3b1e', 2)}<span>About Rebound</span></div>"
+                "<div class='rb-about-headline'>How Rebound helps you recover and perform your best.</div>"
+                "<div class='rb-about-copy'>Rebound turns uploaded revision notes into an adaptive study plan, uses your progress and availability to guide priorities, and lets you preview recovery changes before applying them.</div>",
+                unsafe_allow_html=True,
+            )
+            features = [
+                ("calendar", "green", "Adaptive planning", "Plans adapt to progress, available time, and schedule changes."),
+                ("zap", "amber", "AI-powered analysis", "Extracts key topics, concepts, and relationships from uploaded notes."),
+                ("settings", "blue", "AMD-ready architecture", "Designed so heavier local compute can move to AMD ROCm-compatible hardware."),
+            ]
+            feature_html = "".join(
+                "<div class='rb-about-feature'>"
+                f"<span class='rb-about-feature-icon {tone}'>{_icon(icon_name, 19, 'currentColor', 2)}</span>"
+                f"<div class='rb-about-feature-title'>{html.escape(title)}</div>"
+                f"<div class='rb-about-feature-copy'>{html.escape(copy)}</div></div>"
+                for icon_name, tone, title, copy in features
+            )
+            st.markdown(f"<div class='rb-about-features'>{feature_html}</div>", unsafe_allow_html=True)
+            student = st.session_state.get("student_name")
+            footer = f"Built for {html.escape(str(student))}." if student else "Study smarter. Recover realistically."
+            st.markdown(f"<div class='rb-about-footer'>{footer}</div>", unsafe_allow_html=True)
+        with right:
+            with _card("about_evidence"):
+                st.markdown(
+                    "<div class='rb-about-card-title-row'><div class='rb-about-card-title'>About Rebound</div></div>"
+                    "<div class='rb-about-card-copy'>Uploaded notes become an adaptive study plan. Current language tasks run through Fireworks AI when configured; local heuristics are used only when the recorded source identifies a fallback. The architecture is designed to support future heavier local compute on AMD ROCm-compatible hardware.</div>",
+                    unsafe_allow_html=True,
+                )
+                with st.expander("AMD Compute Evidence", expanded=True):
+                    if not has_evidence:
+                        st.info("Analyse a document in Setup to populate runtime evidence.")
+                    else:
+                        rows = [
+                            ("Provider", provider, "info", "neutral"),
+                            ("Returned model", returned_model, "settings", "neutral"),
+                            ("Operation", operation, "clipboard", "neutral"),
+                            ("Request ID", "Not captured", "info", "warning"),
+                            ("Token usage", "Not captured", "chart", "warning"),
+                            ("Inference status", inference_status, "check" if inference_status == "Completed" else "info",
+                             "success" if inference_status == "Completed" else "warning"),
+                            ("Local fallback", local_fallback, "recovery", "warning" if local_fallback != "No" else "neutral"),
+                        ]
+                        if src:
+                            rows.append(("Analysis source", src, "compare", "neutral"))
+                        if cs.get("analysis_time"):
+                            rows.append(("Analysis time", cs["analysis_time"], "clock", "neutral"))
+                        for label, value, icon_name, tone in rows:
+                            safe_value = html.escape(str(value))
+                            st.markdown(
+                                "<div class='rb-about-evidence-row'>"
+                                f"<span class='rb-about-evidence-icon {tone}'>{_icon(icon_name, 17, 'currentColor', 2)}</span>"
+                                f"<span class='rb-about-evidence-label'>{html.escape(label)}</span>"
+                                f"<span class='rb-about-evidence-value'>{safe_value}</span></div>",
+                                unsafe_allow_html=True,
+                            )
+                    st.markdown(
+                        f"<div class='rb-about-evidence-note'>{_icon('info', 14, '#667085', 2)}"
+                        "<span>Only runtime metadata captured by the application is shown. AMD-ready describes the architecture, not confirmed AMD hardware execution.</span></div>",
+                        unsafe_allow_html=True,
+                    )
 
 
 def page_about():
