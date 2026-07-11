@@ -1,6 +1,7 @@
 """Rebound — adaptive exam-recovery planner."""
 
 import base64
+import calendar
 import hashlib
 import html
 import io
@@ -20,6 +21,7 @@ from ui.components import (
     badge as _badge,
     card as _card,
     chip as _chip,
+    empty_state as _empty_state,
     page_header as _page_header,
     page_shell as _page_shell,
     page_title as _page_title,
@@ -3099,8 +3101,90 @@ def render_week_calendar(plan, status, all_days, base, today):
                             st.rerun()
 
 
+def _select_study_plan_date(value):
+    st.session_state["study_plan_selected_date"] = value
+
+
+def _render_study_session_card(session, status, all_days, today, accent_index):
+    topic = session["topic"]
+    state = status.get(topic, "pending")
+    active = st.session_state.get("active_session") == topic
+    accents = ["green", "blue", "amber", "purple", "coral"]
+    tone = accents[accent_index % len(accents)]
+    with _card(f"study_session_{accent_index}_{re.sub(r'[^A-Za-z0-9]+', '_', topic)}", tone=tone):
+        st.markdown(
+            "<div class='rb-plan-session-head'>"
+            f"<span class='rb-plan-session-icon rb-plan-tone-{tone}'>{_icon('book', 19, 'currentColor', 2)}</span>"
+            "<div class='rb-plan-session-copy'>"
+            f"<strong>{html.escape(str(topic))}</strong>"
+            f"<span>{session['duration']} min</span></div>"
+            f"<div class='rb-plan-session-badges'>{_priority_chip(session.get('priority', 'Low'))}"
+            f"{_status_chip('completed' if state == 'completed' else 'skipped' if state == 'skipped' else 'pending')}</div>"
+            "</div>", unsafe_allow_html=True)
+        if active:
+            st.caption("Currently active")
+        with st.expander("Open session details"):
+            st.write(f"Mastery: {session['mastery']:.0%} · Duration: {session['duration']} min")
+            st.caption(session.get("reason", ""))
+            for point in _key_points(topic, 3):
+                st.markdown(f"- {point}")
+            if state == "pending":
+                actions = st.columns(2)
+                if actions[0].button("Start", type="primary", key=f"cal_start_{topic}"):
+                    st.session_state["active_session"] = topic
+                    st.rerun()
+                if actions[1].button("Complete", key=f"cal_done_{topic}"):
+                    status[topic] = "completed"
+                    st.session_state["session_status"] = status
+                    st.rerun()
+                target = st.selectbox(
+                    "Move to day", all_days,
+                    format_func=lambda day_number: format_date(today + timedelta(days=day_number - 1)),
+                    key=f"cal_mv_sel_{topic}",
+                )
+                secondary = st.columns(2)
+                if secondary[0].button("Move", key=f"cal_mv_{topic}"):
+                    st.session_state["study_plan"] = reschedule_session(
+                        st.session_state["study_plan"], topic, target, today)
+                    st.rerun()
+                if secondary[1].button("Skip", key=f"cal_skip_{topic}"):
+                    status[topic] = "skipped"
+                    st.session_state["session_status"] = status
+                    st.rerun()
+            elif st.button("Reset", key=f"cal_reset_{topic}"):
+                status.pop(topic, None)
+                st.session_state["session_status"] = status
+                st.rerun()
+
+
+def _render_study_month_calendar(selected, available_dates, today):
+    st.markdown(
+        f"<div class='rb-plan-month-title'>{selected.strftime('%B %Y')}</div>",
+        unsafe_allow_html=True,
+    )
+    headers = st.columns(7, gap="small")
+    for col, label in zip(headers, ("M", "T", "W", "T", "F", "S", "S")):
+        col.markdown(f"<div class='rb-plan-weekday'>{label}</div>", unsafe_allow_html=True)
+    month_grid = calendar.Calendar(firstweekday=0).monthdatescalendar(selected.year, selected.month)
+    for week_index, week in enumerate(month_grid):
+        columns = st.columns(7, gap="small")
+        for day_index, day_value in enumerate(week):
+            in_month = day_value.month == selected.month
+            iso = day_value.isoformat()
+            has_plan = iso in available_dates
+            marker = "●" if day_value == today and day_value != selected else "•" if has_plan and day_value != selected else ""
+            label = f"{day_value.day}{marker}" if in_month else " "
+            if columns[day_index].button(
+                label, key=f"sp_cal_{week_index}_{day_index}_{iso}",
+                disabled=not (in_month and has_plan), use_container_width=True,
+                type="primary" if day_value == selected else "secondary",
+                help=("Today" if day_value == today else None),
+            ):
+                _select_study_plan_date(iso)
+                st.rerun()
+
+
 def page_study_plan():
-    _page_title("Study Plan", "calendar")
     mastery = st.session_state.get("mastery_scores") or {}
     sections = st.session_state.get("sections", [])
     tdiff = topic_difficulty_map(sections)
@@ -3116,56 +3200,123 @@ def page_study_plan():
     status = st.session_state.setdefault("session_status", {})
     all_days = sorted({s["day"] for s in plan})
     prog = plan_progress(plan, status)
-    off = st.session_state.get("week_offset", 0)
-    base = today + timedelta(days=7 * off)
+    by_date = {}
+    for session in plan:
+        by_date.setdefault(session["date"], []).append(session)
+    available = sorted(by_date)
+    if not available:
+        st.info("No study sessions are currently scheduled.")
+        return
+    today_iso = today.isoformat()
+    selected_iso = st.session_state.get("study_plan_selected_date")
+    if selected_iso not in by_date:
+        selected_iso = today_iso if today_iso in by_date else available[0]
+        st.session_state["study_plan_selected_date"] = selected_iso
+    selected = date.fromisoformat(selected_iso)
+    selected_index = available.index(selected_iso)
+    selected_sessions = by_date.get(selected_iso, [])
 
-    left, mid, right = st.columns([1.1, 3, 1.3], gap="large")
-    with left:
-        with st.container(border=True):
-            st.markdown(_mini_month_html(base, today, plan), unsafe_allow_html=True)
-        with st.container(border=True):
-            exam = st.session_state.get("exam_date")
-            if exam:
-                try:
-                    st.markdown("**Exam countdown**")
-                    st.markdown(f"<div class='rb-serif' style='font-size:1.5rem'>"
-                                f"{max((exam - today).days, 0)} days</div>", unsafe_allow_html=True)
-                except Exception:
-                    pass
-            st.markdown("**Weekly workload**")
-            st.write(f"{sum(s['duration'] for s in plan)} min planned")
-            st.progress(prog["pct"])
-            st.caption("Adjust availability on the Recovery page.")
-    with mid:
-        render_week_calendar(plan, status, all_days, base, today)
-    with right:
-        with st.container(border=True):
-            st.markdown("**Plan overview**")
-            st.write(f"Total sessions: {prog['total']}")
-            st.write(f"Completed: {prog['completed']}")
-            st.write(f"Remaining: {prog['remaining_minutes']} min")
-            st.progress(prog["pct"])
-        with st.container(border=True):
-            st.markdown("**Focus areas**")
-            weak = sorted(mastery.items(), key=lambda x: x[1])[:3]
-            for t, mv in weak:
-                st.write(f"{t} — {mv:.0%}")
-        with st.container(border=True):
-            st.markdown("**Upcoming sessions**")
-            inc = [s for s in plan if status.get(s["topic"]) not in ("completed", "skipped")][:4]
-            for s in inc:
-                st.caption(f"{s['date_label']} · {s['topic']}")
+    st.markdown("""
+    <style>
+    [class*="st-key-rb_page_study_plan_day"]{max-width:1500px;margin:0 auto;padding:1rem 0 2rem;}
+    [class*="st-key-rb_card_neutral_study_plan_header"], [class*="st-key-rb_card_neutral_study_plan_sidebar"],
+    [class*="st-key-rb_card_neutral_study_plan_day_header"], [class*="st-key-rb_card_"].st-key-unused{
+      border:1px solid var(--rb-neutral-border);border-radius:20px;background:rgba(255,255,255,.94);box-shadow:var(--rb-shadow-card);}
+    [class*="st-key-rb_card_neutral_study_plan_header"]{padding:1.05rem 1.2rem;margin-bottom:1rem;box-shadow:none;}
+    [class*="st-key-rb_card_neutral_study_plan_sidebar"]{padding:1rem;height:100%;}
+    [class*="st-key-rb_card_neutral_study_plan_day_header"]{padding:1rem 1.15rem;margin-bottom:1rem;box-shadow:none;}
+    [class*="st-key-rb_card_green_study_session_"], [class*="st-key-rb_card_blue_study_session_"],
+    [class*="st-key-rb_card_amber_study_session_"], [class*="st-key-rb_card_purple_study_session_"],
+    [class*="st-key-rb_card_coral_study_session_"]{height:100%;padding:1rem;border-radius:18px;background:#fff;
+      border:1px solid var(--rb-neutral-border);box-shadow:0 7px 24px rgba(23,35,58,.05);}
+    .rb-plan-month-title{margin-bottom:.75rem;font-weight:820;color:#17233A}.rb-plan-weekday{text-align:center;color:#98A2B3;font-size:.68rem;font-weight:750;}
+    [class*="st-key-sp_cal_"] button{min-height:32px;padding:2px;border-color:transparent!important;font-size:.72rem;}
+    [class*="st-key-sp_cal_"] button[kind="primary"]{box-shadow:0 5px 14px rgba(250,133,90,.22);}
+    .rb-plan-day-title{font-size:1.3rem;font-weight:820;color:#17233A}.rb-plan-focus{margin-top:5px;color:#667085;font-size:.82rem;}
+    .rb-plan-session-head{display:flex;align-items:center;gap:12px;min-height:62px}.rb-plan-session-icon{display:flex;align-items:center;justify-content:center;
+      width:44px;height:44px;border-radius:12px;flex:0 0 auto}.rb-plan-tone-green{background:#E8F7DE;color:#3f6b1f}.rb-plan-tone-blue{background:#E8F5FA;color:#0d5c6e}
+    .rb-plan-tone-amber{background:#FFF4D5;color:#8a6817}.rb-plan-tone-purple{background:#F0ECFC;color:#6a52b5}.rb-plan-tone-coral{background:#FFF0EA;color:#a44725}
+    .rb-plan-session-copy{display:flex;flex-direction:column;gap:4px;min-width:0;flex:1}.rb-plan-session-copy strong{overflow-wrap:anywhere}.rb-plan-session-copy span{font-size:.75rem;color:#667085}
+    .rb-plan-session-badges{display:flex;gap:5px;align-items:flex-end;flex-direction:column}.rb-plan-overview-title{margin:1.35rem 0 .75rem;font-weight:820}
+    [class*="st-key-sp_overview_"] button{min-height:88px;padding:.65rem;white-space:pre-line;text-align:left;border-color:var(--rb-neutral-border);background:#fff;}
+    [class*="st-key-sp_overview_selected_"] button{border:2px solid var(--rb-coral);box-shadow:0 6px 18px rgba(250,133,90,.14);}
+    @media(max-width:950px){[class*="st-key-rb_study_plan_layout"]>div>[data-testid="stHorizontalBlock"]{flex-direction:column}
+      [class*="st-key-rb_study_plan_layout"]>div>[data-testid="stHorizontalBlock"]>[data-testid="stColumn"]{width:100%!important;flex:1 1 100%!important}}
+    @media(max-width:650px){[class*="st-key-rb_study_sessions_grid"] [data-testid="stHorizontalBlock"],
+      [class*="st-key-rb_button_row_study_plan_day_nav"] [data-testid="stHorizontalBlock"]{flex-direction:column}
+      [class*="st-key-rb_study_sessions_grid"] [data-testid="stColumn"], [class*="st-key-rb_button_row_study_plan_day_nav"] [data-testid="stColumn"]{width:100%!important;flex:1 1 100%!important}
+      [class*="st-key-rb_page_study_plan_day"]{overflow-x:hidden;padding:.5rem 0 1rem}}
+    </style>""", unsafe_allow_html=True)
+
+    with _page_shell("study_plan_day"):
+        with _card("study_plan_header"):
+            _page_header("Study Plan", "Your adaptive schedule, focused one day at a time.",
+                         icon_name="calendar", badge_text="STUDY PLAN DAY VIEW V2", badge_tone="coral")
+        with st.container(key="rb_study_plan_layout"):
+            sidebar, main = st.columns([1.1, 3.9], gap="large")
+        with sidebar:
+            with _card("study_plan_sidebar"):
+                _render_study_month_calendar(selected, set(available), today)
+                st.divider()
+                exam = st.session_state.get("exam_date")
+                if exam:
+                    try:
+                        st.markdown("**Exam countdown**")
+                        st.markdown(f"<div class='rb-serif' style='font-size:1.5rem'>{max((exam - today).days, 0)} days</div>", unsafe_allow_html=True)
+                    except Exception:
+                        pass
+                st.markdown("**Weekly workload**")
+                st.write(f"{sum(s['duration'] for s in plan)} min planned · {prog['completed']}/{prog['total']} completed")
+                _progress_display(prog["pct"], key="study_plan_sidebar_progress", label="Progress")
+                st.caption("Adjust availability on the Recovery page.")
+        with main:
+            with _card("study_plan_day_header"):
+                header, controls = st.columns([2.4, 1.6], gap="medium", vertical_alignment="center")
+                focus = selected_sessions[0]["topic"] if selected_sessions else None
+                header.markdown(
+                    f"<div class='rb-plan-day-title'>{html.escape(selected.strftime('%A, %d %B %Y'))}</div>"
+                    + (f"<div class='rb-plan-focus'>Focus: {html.escape(str(focus))}</div>" if focus else ""),
+                    unsafe_allow_html=True)
+                with controls:
+                    day_nav = _responsive_button_row(3, key="study_plan_day_nav")
+                    if day_nav[0].button("Prev", key="wk_prev", disabled=selected_index == 0, use_container_width=True):
+                        _select_study_plan_date(available[selected_index - 1]); st.rerun()
+                    if day_nav[1].button("Today", key="wk_today", disabled=today_iso not in by_date or selected_iso == today_iso, use_container_width=True):
+                        _select_study_plan_date(today_iso); st.rerun()
+                    if day_nav[2].button("Next", key="wk_next", disabled=selected_index == len(available) - 1, use_container_width=True):
+                        _select_study_plan_date(available[selected_index + 1]); st.rerun()
+            if selected_sessions:
+                with st.container(key="rb_study_sessions_grid"):
+                    for row_start in range(0, len(selected_sessions), 2):
+                        session_columns = st.columns(2, gap="medium")
+                        for offset, session in enumerate(selected_sessions[row_start:row_start + 2]):
+                            with session_columns[offset]:
+                                _render_study_session_card(session, status, all_days, today, row_start + offset)
+            else:
+                _empty_state("No sessions planned", "This day is free. Choose another plan date to continue.", key="study_plan_day", icon_name="calendar")
+            st.markdown("<div class='rb-plan-overview-title'>Overview of other days</div>", unsafe_allow_html=True)
+            overview_columns = st.columns(min(len(available), 7), gap="small")
+            for index, day_iso in enumerate(available):
+                day_value = date.fromisoformat(day_iso)
+                sessions = by_date[day_iso]
+                minutes = sum(s["duration"] for s in sessions)
+                completed = sum(1 for s in sessions if status.get(s["topic"]) == "completed")
+                selected_class = "selected" if day_iso == selected_iso else "idle"
+                with overview_columns[index % len(overview_columns)]:
+                    if st.button(
+                        f"{day_value.day}  {day_value.strftime('%a')}\n{len(sessions)} sessions\n{minutes} min · {completed}/{len(sessions)} done",
+                        key=f"sp_overview_{selected_class}_{day_iso}", use_container_width=True,
+                    ):
+                        _select_study_plan_date(day_iso); st.rerun()
 
 
 # ---------------------------------------------------------------------------
 # Recovery (SaaS dashboard layout)
 # ---------------------------------------------------------------------------
 def render_recovery_dashboard():
-    _page_title("Recovery", "recovery")
-    st.write("Life happens. Mark the days you can't study and Rebound rebuilds a realistic plan — "
-             "you preview it before anything changes.")
     plan = st.session_state.get("study_plan") or []
     if not plan:
+        _page_title("Recovery", "recovery")
         st.info("Generate a study plan first (Diagnostic -> Study Plan).")
         return
     mastery = st.session_state.get("mastery_scores", {})
@@ -3173,115 +3324,210 @@ def render_recovery_dashboard():
     start = date.today()
     preview = st.session_state.get("recovery_preview")
     changes = st.session_state.get("recovery_changes", [])
+    impact = estimate_impact(plan, preview, changes) if preview is not None else None
+    day_options = [(d, format_date(start + timedelta(days=d - 1))) for d in range(1, 8)]
 
-    # --- Estimated Impact (top, wide) ---
-    with st.container(border=True):
-        st.markdown("### Estimated Impact")
-        if preview is None:
-            st.caption("Generate a preview below to see how your plan would change. "
-                       "Nothing changes until you apply.")
-        else:
-            impact = estimate_impact(plan, preview, changes)
-            st.caption("Preview only — your study plan has NOT changed yet.")
-            im = st.columns(5)
-            for col, (lbl, val) in zip(im, [("Moved", impact["moved"]), ("Compressed", impact["compressed"]),
-                                            ("Removed", impact["removed"]), ("Added", impact["added"]),
-                                            ("Time Saved", f"{impact['time_saved']} min")]):
-                col.metric(lbl, val)
-            if impact["fits"]:
-                st.success("All sessions fit within your available days.")
-            else:
-                st.warning("Some sessions couldn't be placed. Try strategy B or C, or add hours.")
+    st.markdown("""
+    <style>
+    [class*="st-key-rb_page_recovery_v2"]{max-width:1500px;margin:0 auto;padding:1rem 0 2rem;}
+    [class*="st-key-rb_card_neutral_recovery_header"], [class*="st-key-rb_card_neutral_recovery_impact"],
+    [class*="st-key-rb_card_neutral_recovery_settings"], [class*="st-key-rb_card_neutral_recovery_compare"],
+    [class*="st-key-rb_insight_"][class*="_recovery_"]{border:1px solid var(--rb-neutral-border);border-radius:20px;
+      background:rgba(255,255,255,.95);box-shadow:var(--rb-shadow-card);padding:1.15rem;}
+    [class*="st-key-rb_card_neutral_recovery_header"]{margin-bottom:1rem;box-shadow:none;}
+    [class*="st-key-rb_card_neutral_recovery_impact"], [class*="st-key-rb_card_neutral_recovery_settings"],
+    [class*="st-key-rb_card_neutral_recovery_compare"]{margin-bottom:1rem;}
+    .rb-recovery-section-title{display:flex;align-items:center;gap:10px;color:#17233A;font-size:1.05rem;font-weight:820;}
+    .rb-recovery-section-subtitle{margin:.25rem 0 1rem 29px;color:#667085;font-size:.78rem;}
+    [class*="st-key-rb_recovery_metric_"]{min-height:105px;padding:.85rem;border-radius:16px;border:1px solid rgba(229,232,239,.85);box-shadow:none;}
+    .rb-recovery-metric-icon{display:flex;align-items:center;justify-content:center;width:32px;height:32px;margin-bottom:7px;border-radius:10px;}
+    .rb-recovery-metric-label{color:#667085;font-size:.72rem}.rb-recovery-metric-value{margin-top:2px;color:#17233A;font-size:1.3rem;font-weight:850;}
+    .rb-recovery-blue{background:#EEF6FF;color:#347FC4}.rb-recovery-cyan{background:#EAF8FA;color:#22879A}
+    .rb-recovery-purple{background:#F2EEFC;color:#765CC7}.rb-recovery-green{background:#EDF8E8;color:#4A8B38}
+    [class*="st-key-rb_card_neutral_recovery_settings"] [data-testid="stNumberInput"],
+    [class*="st-key-rb_card_neutral_recovery_settings"] [data-baseweb="select"]{border-radius:12px;}
+    .rb-recovery-strategy-note{margin-top:.55rem;color:#667085;font-size:.76rem;line-height:1.55;}
+    .rb-recovery-plan-title{margin-bottom:.7rem;font-weight:820;color:#17233A}.rb-recovery-entry{display:flex;align-items:center;justify-content:space-between;
+      gap:10px;margin:.45rem 0;padding:.68rem .75rem;border:1px solid var(--rb-neutral-border);border-radius:13px;background:#fff;font-size:.76rem;}
+    .rb-recovery-entry-copy{min-width:0;overflow-wrap:anywhere}.rb-recovery-removed{background:rgba(201,54,56,.04)}
+    .rb-recovery-insight-title{display:flex;align-items:center;gap:9px;margin-bottom:.8rem;font-weight:820}.rb-recovery-insight-copy{color:#667085;font-size:.8rem;line-height:1.6;}
+    .rb-recovery-constraint{display:flex;justify-content:space-between;gap:12px;padding:.55rem 0;border-bottom:1px solid rgba(229,232,239,.7);font-size:.76rem;}
+    .rb-recovery-constraint:last-child{border-bottom:0}.rb-recovery-constraint span{color:#667085}.rb-recovery-constraint strong{text-align:right;overflow-wrap:anywhere;}
+    @media(max-width:1000px){[class*="st-key-rb_recovery_layout"]>div>[data-testid="stHorizontalBlock"]{flex-direction:column}
+      [class*="st-key-rb_recovery_layout"]>div>[data-testid="stHorizontalBlock"]>[data-testid="stColumn"]{width:100%!important;flex:1 1 100%!important}}
+    @media(max-width:700px){[class*="st-key-rb_recovery_settings_columns"] [data-testid="stHorizontalBlock"],
+      [class*="st-key-rb_recovery_compare_columns"] [data-testid="stHorizontalBlock"],
+      [class*="st-key-rb_recovery_metrics"] [data-testid="stHorizontalBlock"],
+      [class*="st-key-rb_recovery_actions"] [data-testid="stHorizontalBlock"]{flex-direction:column}
+      [class*="st-key-rb_recovery_settings_columns"] [data-testid="stColumn"], [class*="st-key-rb_recovery_compare_columns"] [data-testid="stColumn"],
+      [class*="st-key-rb_recovery_metrics"] [data-testid="stColumn"], [class*="st-key-rb_recovery_actions"] [data-testid="stColumn"]{width:100%!important;flex:1 1 100%!important}
+      [class*="st-key-rb_page_recovery_v2"]{overflow-x:hidden;padding:.5rem 0 1rem}}
+    </style>""", unsafe_allow_html=True)
 
-    mainc, rightc = st.columns([2.4, 1], gap="large")
-    with mainc:
-        # --- Recovery Settings ---
-        with st.container(border=True):
-            settop = st.columns([3, 2])
-            with settop[0]:
-                _section("Recovery Settings", "settings")
-            available_hours = st.number_input("Daily study hours", 0.5, 12.0,
-                                              float(st.session_state.get("daily_study_time", 2.0)), 0.5,
-                                              key="rec_hours")
-            day_options = [(d, format_date(start + timedelta(days=d - 1))) for d in range(1, 8)]
-            unavailable_labels = st.multiselect("Days you're unavailable (calendar)",
-                                                [lbl for _, lbl in day_options], key="rec_unavail")
-            unavailable_days = {d for d, lbl in day_options if lbl in unavailable_labels}
-            strat = st.radio("If the plan no longer fits your available time, prefer to:",
-                             ["A · Increase time", "B · Reduce sessions", "C · Compress topics"],
-                             index=0, horizontal=True, key="rec_strategy")
-            st.caption("A increases study time on remaining days · B reduces low-priority sessions · "
-                       "C compresses high-mastery topics.")
-            if settop[1].button("Generate Recovery Preview", type="primary", key="rec_gen"):
-                pv, ch = build_recovery_preview(plan, mastery, prereqs, unavailable_days,
-                                                available_hours, start, strategy=strat[0])
-                st.session_state["recovery_preview"] = pv
-                st.session_state["recovery_changes"] = ch
-                st.session_state["recovery_settings"] = {"available_hours": available_hours,
-                                                         "unavailable_days": sorted(unavailable_days),
-                                                         "strategy": strat[0]}
-                st.rerun()
+    with _page_shell("recovery_v2"):
+        with _card("recovery_header"):
+            _page_header(
+                "Recovery",
+                "Mark unavailable days and preview a realistic rebuilt plan before applying any changes.",
+                icon_name="recovery",
+            )
+        with st.container(key="rb_recovery_layout"):
+            mainc, rightc = st.columns([2.8, 1], gap="large")
+        with mainc:
+            with _card("recovery_impact"):
+                st.markdown(
+                    f"<div class='rb-recovery-section-title'>{_icon('chart', 19, '#5AA9E6', 2)}<span>Estimated Impact</span></div>"
+                    "<div class='rb-recovery-section-subtitle'>Preview only — your study plan has not changed yet.</div>",
+                    unsafe_allow_html=True,
+                )
+                if impact is None:
+                    st.info("Generate a recovery preview below to see real impact metrics.")
+                else:
+                    metric_data = [
+                        ("Moved", impact["moved"], "compare", "blue"),
+                        ("Compressed", impact["compressed"], "recovery", "cyan"),
+                        ("Removed", impact["removed"], "x", "purple"),
+                        ("Added", impact["added"], "check", "green"),
+                        ("Time Saved", f"{impact['time_saved']} min", "clock", "blue"),
+                    ]
+                    with st.container(key="rb_recovery_metrics"):
+                        metric_cols = st.columns(5, gap="small")
+                    for index, (label, value, icon_name, tone) in enumerate(metric_data):
+                        with metric_cols[index]:
+                            with st.container(key=f"rb_recovery_metric_{tone}_{index}"):
+                                st.markdown(
+                                    f"<span class='rb-recovery-metric-icon rb-recovery-{tone}'>{_icon(icon_name, 17, 'currentColor', 2)}</span>"
+                                    f"<div class='rb-recovery-metric-label'>{label}</div><div class='rb-recovery-metric-value'>{value}</div>",
+                                    unsafe_allow_html=True,
+                                )
+                    if impact["fits"]:
+                        st.success("All sessions fit within your available days.")
+                    else:
+                        st.warning("Some sessions couldn't be placed. Try strategy B or C, or add hours.")
 
-        # --- Original vs Recovered ---
-        if preview is not None:
-            with st.container(border=True):
-                _section("Original vs. Recovered", "compare")
-                change_of = {c["topic"]: c["change"] for c in changes}
-                CH = {"moved": ("Moved", "rgba(98,196,218,.18)", "#0d5c6e"),
-                      "compressed": ("Compressed", "rgba(255,222,150,.35)", "#7a5a17"),
-                      "removed": ("Removed", "rgba(201,54,56,.14)", "#8a1f1f"),
-                      "added": ("Added", "#F6FFEA", "#3f6b1f"),
-                      "unchanged": ("Unchanged", "rgba(120,120,120,.12)", "#5b5b5b")}
-                cl, cr = st.columns(2)
-                with cl:
-                    st.markdown("**Original Plan**")
-                    for s in plan:
-                        st.caption(f"{s['date_label']} — {s['topic']} ({s['duration']} min)")
-                with cr:
-                    st.markdown("**Recovered Plan (preview)**")
-                    for s in preview:
-                        lbl, bg, fg = CH.get(change_of.get(s["topic"], "unchanged"))
-                        st.markdown(f"<div class='rb-evt m'>{s['date_label']} — {s['topic']} "
-                                    f"({s['duration']} min) {_chip(lbl, bg, fg)}</div>", unsafe_allow_html=True)
-                    for c in changes:
-                        if c["change"] == "removed":
-                            lbl, bg, fg = CH["removed"]
-                            st.markdown(f"<div class='rb-evt m'>{c['topic']} {_chip(lbl, bg, fg)}</div>",
+            with _card("recovery_settings"):
+                settop = st.columns([3, 2], vertical_alignment="center")
+                settop[0].markdown(
+                    f"<div class='rb-recovery-section-title'>{_icon('settings', 19, '#5AA9E6', 2)}<span>Recovery Settings</span></div>",
+                    unsafe_allow_html=True,
+                )
+                with st.container(key="rb_recovery_settings_columns"):
+                    settings_left, settings_right = st.columns(2, gap="large")
+                with settings_left:
+                    available_hours = st.number_input(
+                        "Daily study hours", 0.5, 12.0,
+                        float(st.session_state.get("daily_study_time", 2.0)), 0.5,
+                        key="rec_hours",
+                    )
+                    strat = st.radio(
+                        "If the plan no longer fits your available time, prefer to:",
+                        ["A · Increase time", "B · Reduce sessions", "C · Compress topics"],
+                        index=0, horizontal=True, key="rec_strategy",
+                    )
+                    st.markdown(
+                        "<div class='rb-recovery-strategy-note'>A increases study time on remaining days · "
+                        "B reduces low-priority sessions · C compresses high-mastery topics.</div>",
+                        unsafe_allow_html=True,
+                    )
+                with settings_right:
+                    unavailable_labels = st.multiselect(
+                        "Days you're unavailable (calendar)",
+                        [label for _, label in day_options], key="rec_unavail",
+                    )
+                    unavailable_days = {day for day, label in day_options if label in unavailable_labels}
+                    if unavailable_labels:
+                        st.caption(f"{len(unavailable_labels)} unavailable day{'s' if len(unavailable_labels) != 1 else ''} selected")
+                if settop[1].button("Generate Recovery Preview", type="primary", key="rec_gen", use_container_width=True):
+                    pv, ch = build_recovery_preview(plan, mastery, prereqs, unavailable_days,
+                                                    available_hours, start, strategy=strat[0])
+                    st.session_state["recovery_preview"] = pv
+                    st.session_state["recovery_changes"] = ch
+                    st.session_state["recovery_settings"] = {"available_hours": available_hours,
+                                                             "unavailable_days": sorted(unavailable_days),
+                                                             "strategy": strat[0]}
+                    st.rerun()
+
+            with _card("recovery_compare"):
+                st.markdown(
+                    f"<div class='rb-recovery-section-title'>{_icon('compare', 19, '#5AA9E6', 2)}<span>Original vs. Recovered</span></div>",
+                    unsafe_allow_html=True,
+                )
+                if preview is None:
+                    _empty_state("No preview yet", "Choose your constraints and generate a preview to compare plans.",
+                                 key="recovery_preview", icon_name="compare")
+                else:
+                    change_of = {change["topic"]: change["change"] for change in changes}
+                    change_styles = {
+                        "moved": ("Moved", "rgba(98,196,218,.18)", "#0d5c6e"),
+                        "compressed": ("Compressed", "rgba(90,169,230,.16)", "#28658f"),
+                        "removed": ("Removed", "rgba(201,54,56,.14)", "#8a1f1f"),
+                        "added": ("Added", "#F6FFEA", "#3f6b1f"),
+                        "unchanged": ("Unchanged", "rgba(139,114,216,.12)", "#614ba7"),
+                    }
+                    with st.container(key="rb_recovery_compare_columns"):
+                        original_col, recovered_col = st.columns(2, gap="large")
+                    with original_col:
+                        st.markdown("<div class='rb-recovery-plan-title'>Original Plan</div>", unsafe_allow_html=True)
+                        for session in plan:
+                            copy = (f"{html.escape(str(session['date_label']))} — {html.escape(str(session['topic']))} "
+                                    f"({session['duration']} min)")
+                            st.markdown(f"<div class='rb-recovery-entry'><span class='rb-recovery-entry-copy'>{copy}</span></div>",
                                         unsafe_allow_html=True)
-                act = st.columns(2)
-                if act[0].button("Apply Recovery Plan", type="primary", key="rec_apply"):
-                    st.session_state["study_plan"] = apply_recovery(preview)
-                    st.session_state["recovered_plan"] = st.session_state["study_plan"]
-                    print("[Rebound] Recovery plan updated.")
-                    live = {s["topic"] for s in preview}
-                    st.session_state["session_status"] = {t: v for t, v in
-                                                          st.session_state.get("session_status", {}).items()
-                                                          if t in live}
-                    st.session_state["recovery_preview"] = None
-                    st.session_state["recovery_changes"] = []
-                    st.success("Recovery applied. Your study plan is now updated.")
-                    st.rerun()
-                if act[1].button("Cancel", key="rec_cancel"):
-                    st.session_state["recovery_preview"] = None
-                    st.session_state["recovery_changes"] = []
-                    st.rerun()
+                    with recovered_col:
+                        st.markdown("<div class='rb-recovery-plan-title'>Recovered Plan (preview)</div>", unsafe_allow_html=True)
+                        for session in preview:
+                            label, bg, fg = change_styles[change_of.get(session["topic"], "unchanged")]
+                            copy = (f"{html.escape(str(session['date_label']))} — {html.escape(str(session['topic']))} "
+                                    f"({session['duration']} min)")
+                            st.markdown(f"<div class='rb-recovery-entry'><span class='rb-recovery-entry-copy'>{copy}</span>{_chip(label, bg, fg)}</div>",
+                                        unsafe_allow_html=True)
+                        for change in changes:
+                            if change["change"] == "removed":
+                                label, bg, fg = change_styles["removed"]
+                                st.markdown(
+                                    f"<div class='rb-recovery-entry rb-recovery-removed'><span class='rb-recovery-entry-copy'>{html.escape(str(change['topic']))}</span>{_chip(label, bg, fg)}</div>",
+                                    unsafe_allow_html=True,
+                                )
+                    with st.container(key="rb_recovery_actions"):
+                        act = st.columns(2)
+                    if act[0].button("Apply Recovery Plan", type="primary", key="rec_apply", use_container_width=True):
+                        st.session_state["study_plan"] = apply_recovery(preview)
+                        st.session_state["recovered_plan"] = st.session_state["study_plan"]
+                        print("[Rebound] Recovery plan updated.")
+                        live = {s["topic"] for s in preview}
+                        st.session_state["session_status"] = {t: v for t, v in
+                                                              st.session_state.get("session_status", {}).items()
+                                                              if t in live}
+                        st.session_state["recovery_preview"] = None
+                        st.session_state["recovery_changes"] = []
+                        st.success("Recovery applied. Your study plan is now updated.")
+                        st.rerun()
+                    if act[1].button("Cancel", key="rec_cancel", use_container_width=True):
+                        st.session_state["recovery_preview"] = None
+                        st.session_state["recovery_changes"] = []
+                        st.rerun()
 
-    with rightc:
-        with st.container(border=True):
-            st.markdown("**Recovery Summary**")
-            st.write("Rebound will rebuild your plan around the days and strategy you choose. "
-                     "Nothing changes until you apply.")
-        with st.container(border=True):
-            st.markdown("**Selected Constraints**")
-            settings = st.session_state.get("recovery_settings", {})
-            st.write(f"Daily study hours: {settings.get('available_hours', st.session_state.get('daily_study_time', 2.0))}")
-            un = settings.get("unavailable_days", [])
-            st.write(f"Unavailable days: {len(un)} selected" if un else "Unavailable days: none")
-            st.write(f"Strategy: {settings.get('strategy', 'A')}")
-        with st.container(border=True):
-            st.markdown("**Tips**")
-            st.write("Rebound prioritises low-mastery and prerequisite topics so your progress "
-                     "stays on track.")
+        with rightc:
+            with _sidebar_insight_card("recovery_summary", tone="blue"):
+                st.markdown(
+                    f"<div class='rb-recovery-insight-title'>{_icon('chart', 18, '#5AA9E6', 2)}<span>Recovery Summary</span></div>"
+                    "<div class='rb-recovery-insight-copy'>Rebound rebuilds your plan around the availability and strategy you choose. Nothing changes until you apply the preview.</div>",
+                    unsafe_allow_html=True,
+                )
+            with _sidebar_insight_card("recovery_constraints", tone="coral"):
+                st.markdown(
+                    f"<div class='rb-recovery-insight-title'>{_icon('calendar', 18, '#FA855A', 2)}<span>Selected Constraints</span></div>"
+                    f"<div class='rb-recovery-constraint'><span>Daily study hours</span><strong>{available_hours:.1f} hrs</strong></div>"
+                    f"<div class='rb-recovery-constraint'><span>Unavailable days</span><strong>{html.escape(', '.join(unavailable_labels) if unavailable_labels else 'None')}</strong></div>"
+                    f"<div class='rb-recovery-constraint'><span>Strategy</span><strong>{html.escape(str(strat))}</strong></div>",
+                    unsafe_allow_html=True,
+                )
+            with _sidebar_insight_card("recovery_tips", tone="amber"):
+                st.markdown(
+                    f"<div class='rb-recovery-insight-title'>{_icon('zap', 18, '#B58212', 2)}<span>Tips</span></div>"
+                    "<div class='rb-recovery-insight-copy'>Lower-mastery topics are prioritised, prerequisites are considered, and recovery keeps the rebuilt plan within the selected availability where possible.</div>",
+                    unsafe_allow_html=True,
+                )
 
 
 def page_recovery():
