@@ -354,21 +354,21 @@ div[data-testid="stVerticalBlockBorderWrapper"]:has([class*="st-key-home_rail_"]
   box-sizing:border-box; width:100%; max-width:100%; overflow-x:clip;
   padding:clamp(1rem, 2.5vw, 1.75rem) !important;
 }}
-.rb-ui-page-header {{
+.rb-plain-page-header {{
   display:flex; align-items:center; gap:14px; min-width:0; margin:0 0 1.5rem;
 }}
-.rb-ui-page-icon {{
+.rb-plain-page-icon {{
   display:flex; flex:0 0 auto; align-items:center; justify-content:center;
   width:50px; height:50px; border-radius:14px; background:rgba(250,133,90,.11);
 }}
-.rb-ui-page-heading {{ min-width:0; }}
-.rb-ui-page-title-row {{ display:flex; flex-wrap:wrap; align-items:center; gap:8px 10px; }}
-.rb-ui-page-title-row h1 {{
-  margin:0 !important; font-family:Inter,Arial,sans-serif !important;
+.rb-plain-page-heading {{ min-width:0; }}
+.rb-plain-page-title {{ display:flex; flex-wrap:wrap; align-items:center; gap:8px 10px; }}
+.rb-plain-page-title h1 {{
+  margin:0 !important; font-family:Georgia,'Times New Roman',serif !important;
   font-size:clamp(1.55rem, 2.5vw, 2rem) !important; font-weight:820;
   line-height:1.15; letter-spacing:-.035em; overflow-wrap:anywhere;
 }}
-.rb-ui-page-subtitle {{ margin-top:4px; color:var(--text-muted) !important; font-size:.9rem; }}
+.rb-plain-page-subtitle {{ margin-top:4px; color:var(--text-muted) !important; font-size:.9rem; }}
 .rb-ui-section-header {{
   display:flex; align-items:center; gap:10px; min-width:0; margin:0 0 1rem;
 }}
@@ -483,7 +483,7 @@ div[data-testid="stVerticalBlockBorderWrapper"]:has([class*="st-key-home_rail_"]
 [class*="st-key-rb_button_row_"] [data-testid="stColumn"] {{ min-width:0; }}
 @media (max-width: 800px) {{
   [class*="st-key-rb_page_"] {{ padding:.85rem !important; }}
-  .rb-ui-page-header, .rb-ui-section-header {{ align-items:flex-start; flex-wrap:wrap; }}
+  .rb-plain-page-header, .rb-ui-section-header {{ align-items:flex-start; flex-wrap:wrap; }}
   .rb-ui-section-trailing {{ width:100%; text-align:left; }}
   [class*="st-key-rb_button_row_"] [data-testid="stHorizontalBlock"] {{ flex-direction:column; }}
   [class*="st-key-rb_button_row_"] [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] {{
@@ -502,9 +502,9 @@ div[data-testid="stVerticalBlockBorderWrapper"]:has([class*="st-key-home_rail_"]
   margin-bottom:1.35rem; padding:1.15rem 1.25rem !important;
   background:rgba(255,255,255,.74); box-shadow:none;
 }}
-[class*="st-key-rb_card_neutral_diagnostic_header"] .rb-ui-page-header {{ margin:0; }}
-[class*="st-key-rb_card_neutral_diagnostic_header"] .rb-ui-page-icon {{ width:48px; height:48px; }}
-[class*="st-key-rb_card_neutral_diagnostic_header"] .rb-ui-page-title-row h1 {{ font-size:1.4rem !important; }}
+[class*="st-key-rb_card_neutral_diagnostic_header"] .rb-plain-page-header {{ margin:0; }}
+[class*="st-key-rb_card_neutral_diagnostic_header"] .rb-plain-page-icon {{ width:48px; height:48px; }}
+[class*="st-key-rb_card_neutral_diagnostic_header"] .rb-plain-page-title h1 {{ font-size:1.4rem !important; }}
 [class*="st-key-rb_card_neutral_diagnostic_header"]
   [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] + [data-testid="stColumn"] {{
   border-left:1px solid var(--rb-neutral-border); padding-left:1.35rem;
@@ -604,9 +604,9 @@ div[data-testid="stVerticalBlockBorderWrapper"]:has([class*="st-key-home_rail_"]
   margin-bottom:1.35rem; padding:1.1rem 1.25rem !important;
   background:rgba(255,255,255,.78); box-shadow:none;
 }}
-[class*="st-key-rb_card_neutral_diagnostic_results_header"] .rb-ui-page-header {{ margin:0; }}
-[class*="st-key-rb_card_neutral_diagnostic_results_header"] .rb-ui-page-icon {{ width:48px; height:48px; }}
-[class*="st-key-rb_card_neutral_diagnostic_results_header"] .rb-ui-page-title-row h1 {{ font-size:1.4rem !important; }}
+[class*="st-key-rb_card_neutral_diagnostic_results_header"] .rb-plain-page-header {{ margin:0; }}
+[class*="st-key-rb_card_neutral_diagnostic_results_header"] .rb-plain-page-icon {{ width:48px; height:48px; }}
+[class*="st-key-rb_card_neutral_diagnostic_results_header"] .rb-plain-page-title h1 {{ font-size:1.4rem !important; }}
 [class*="st-key-rb_card_neutral_diagnostic_results_header"]
   [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] + [data-testid="stColumn"] {{
   border-left:1px solid var(--rb-neutral-border); padding-left:1.35rem;
@@ -669,9 +669,10 @@ div[data-testid="stVerticalBlockBorderWrapper"]:has([class*="st-key-home_rail_"]
   line-height:1; letter-spacing:-.055em;
 }}
 .rb-results-overall-caption {{ margin-top:.75rem; font-size:.86rem; font-weight:650; }}
-[class*="st-key-rb_insight_neutral_diagnostic_results_overview"] {{ padding:1.15rem !important; }}
-.rb-results-overview-title {{ margin-bottom:.75rem; font-size:1rem; font-weight:820; }}
-.rb-results-legend {{ display:flex; gap:9px; margin-bottom:.8rem; flex-wrap:wrap; }}
+[class*="st-key-rb_insight_neutral_diagnostic_results_overview"] {{ padding:.9rem !important; }}
+[class*="st-key-rb_insight_neutral_diagnostic_results_overview"] [data-testid="stVerticalBlock"] {{ gap:0 !important; }}
+.rb-results-overview-title {{ margin-bottom:.45rem; font-size:1rem; font-weight:820; }}
+.rb-results-legend {{ display:flex; gap:9px; margin-bottom:.55rem; flex-wrap:wrap; }}
 .rb-results-legend span {{
   display:inline-flex; align-items:center; gap:5px; color:var(--text-muted) !important;
   font-size:.67rem; white-space:nowrap;
@@ -680,9 +681,10 @@ div[data-testid="stVerticalBlockBorderWrapper"]:has([class*="st-key-home_rail_"]
 .rb-results-legend i.green {{ background:#34B56A; }}
 .rb-results-legend i.amber {{ background:#F4B51E; }}
 .rb-results-legend i.red {{ background:#E8504F; }}
-[class*="st-key-rb_result_overview_"] {{ margin:.48rem 0; padding:0 !important; border-radius:12px; }}
+[class*="st-key-rb_result_overview_"] {{ margin:0 0 7px; padding:0 !important; border-radius:10px; }}
+[class*="st-key-rb_result_overview_"]:last-child {{ margin-bottom:0; }}
 [class*="st-key-rb_result_overview_"] [data-testid="stButton"] button {{
-  min-height:52px; padding:.55rem .7rem; border:1px solid transparent; border-radius:12px;
+  min-height:38px; padding:.35rem .65rem; border:1px solid transparent; border-radius:10px;
   box-shadow:none; font-size:.74rem; text-align:left; white-space:normal;
 }}
 [class*="st-key-rb_result_overview_green_"] [data-testid="stButton"] button {{ background:rgba(232,247,222,.72); }}

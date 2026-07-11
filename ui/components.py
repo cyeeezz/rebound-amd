@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import html
 import re
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 
 import streamlit as st
 from streamlit.delta_generator import DeltaGenerator
@@ -50,31 +50,40 @@ def page_shell(key: str = "default") -> DeltaGenerator:
     return st.container(key=f"rb_page_{_safe_key(key)}")
 
 
-def page_header(
+def render_plain_page_header(
     title: str,
-    subtitle: str = "",
+    subtitle: str | None = None,
     *,
     icon_name: str | None = None,
-    badge_text: str | None = None,
-    badge_tone: str = "neutral",
+    right_content: Callable[[], None] | None = None,
 ) -> None:
-    """Render an escaped page heading; this helper contains no interactive UI."""
+    """Render production page-heading content with no badge or status path."""
     icon_html = (
-        f"<span class='rb-ui-page-icon'>{_icon(icon_name, 23, PALETTE['coral'], 2)}</span>"
+        f"<span class='rb-plain-page-icon'>{_icon(icon_name, 23, PALETTE['coral'], 2)}</span>"
         if icon_name
         else ""
     )
-    badge_html = badge(badge_text, badge_tone) if badge_text else ""
     subtitle_html = (
-        f"<div class='rb-ui-page-subtitle'>{_safe_text(subtitle)}</div>" if subtitle else ""
+        f"<div class='rb-plain-page-subtitle'>{_safe_text(subtitle)}</div>" if subtitle else ""
     )
-    st.markdown(
-        "<div class='rb-ui-page-header'>"
-        f"{icon_html}<div class='rb-ui-page-heading'>"
-        f"<div class='rb-ui-page-title-row'><h1>{_safe_text(title)}</h1>{badge_html}</div>"
-        f"{subtitle_html}</div></div>",
-        unsafe_allow_html=True,
-    )
+    def _render_left() -> None:
+        st.markdown(
+            "<div class='rb-plain-page-header'>"
+            f"{icon_html}<div class='rb-plain-page-heading'>"
+            f"<div class='rb-plain-page-title'><h1>{_safe_text(title)}</h1></div>"
+            f"{subtitle_html}</div></div>",
+            unsafe_allow_html=True,
+        )
+
+    if right_content is None:
+        _render_left()
+        return
+
+    left, right = st.columns([3.2, 2.2], gap="large", vertical_alignment="center")
+    with left:
+        _render_left()
+    with right:
+        right_content()
 
 
 def section_header(

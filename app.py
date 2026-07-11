@@ -22,7 +22,7 @@ from ui.components import (
     card as _card,
     chip as _chip,
     empty_state as _empty_state,
-    page_header as _page_header,
+    render_plain_page_header as _plain_page_header,
     page_shell as _page_shell,
     page_title as _page_title,
     progress_display as _progress_display,
@@ -2373,11 +2373,6 @@ def render_setup_split_layout():
                     unsafe_allow_html=True,
                 )
                 st.markdown(
-                    f"<div class='rb-setup-kicker'>{_icon('settings', 15, '#8a3b1e', 2.1)}"
-                    "<span>Setup your exam</span></div>",
-                    unsafe_allow_html=True,
-                )
-                st.markdown(
                     "<div class='rb-setup-hero'>Turn your notes into<br>a study plan that adapts.</div>",
                     unsafe_allow_html=True,
                 )
@@ -2482,7 +2477,6 @@ def page_home():
                     "</div>"
                     "<div class='rb-home-subtitle'>Your personalised plan for today.</div>"
                     "</div>"
-                    f"<div class='rb-home-rebuild-badge'>{_badge('HOME DASHBOARD REBUILD', 'coral')}</div>"
                     f"<div class='rb-home-count'><strong>{len(todays)}</strong> "
                     f"session{'s' if len(todays) != 1 else ''} today</div></div>",
                     unsafe_allow_html=True,
@@ -2645,7 +2639,7 @@ def render_relationship_canvas(sections, graph):
         return "#FF7A59" if topic in exam_critical else roles[classify_topic_role(topic, graph)]
 
     with st.container(key="rb_kmap_layout"):
-        graph_col, insp_col = st.columns([2.3, 1.0], gap="large")
+        graph_col, insp_col = st.columns([1, 1], gap="large")
     clicked = None
     with graph_col:
         with _card("knowledge_map_graph"):
@@ -2657,7 +2651,7 @@ def render_relationship_canvas(sections, graph):
                 nodes = [Node(id=t, label=t, size=20, color=_node_color(t)) for t in titles]
                 ag_edges = [Edge(source=a, target=b, color="#C6D0DC") for a, b in edges]
                 cfg = Config(
-                    width="100%", height=520, directed=True, physics=True,
+                    width="100%", height=600, directed=True, physics=True,
                     nodeHighlightBehavior=True, highlightColor="#FF7A59",
                     collapsible=False,
                 )
@@ -2689,18 +2683,11 @@ def render_relationship_canvas(sections, graph):
                 st.info("Interactive graph unavailable — showing relationships as a list.")
                 for a, b in edges:
                     st.write(f"{a} → {b}")
-            picked = st.selectbox("Inspect topic", titles,
-                                  index=titles.index(st.session_state["kmap_sel_topic"])
-                                  if st.session_state.get("kmap_sel_topic") in titles else 0,
-                                  key="kmap_pick")
             if clicked and clicked in titles:
                 st.session_state["kmap_sel_topic"] = clicked
-            else:
-                st.session_state["kmap_sel_topic"] = picked
             if not edges:
                 st.info("No prerequisite relationships were detected. "
                         "Each topic is currently treated as independent.")
-        with _card("knowledge_map_legend"):
             st.markdown(
                 "<div class='rb-kmap-legend'><strong>Map legend</strong>"
                 "<span><i class='foundation'></i>Foundation</span>"
@@ -2763,19 +2750,22 @@ def page_knowledge_map():
     [class*="st-key-rb_page_knowledge_map"]{max-width:1500px;margin:0 auto;padding:1rem 0 2rem;}
     [class*="st-key-rb_card_neutral_knowledge_map_header"],
     [class*="st-key-rb_card_neutral_knowledge_map_graph"],
-    [class*="st-key-rb_card_neutral_knowledge_map_legend"],
     [class*="st-key-rb_insight_neutral_knowledge_map_inspector"]{
       border:1px solid var(--rb-neutral-border);border-radius:20px;background:rgba(255,255,255,.94);
       box-shadow:var(--rb-shadow-card);padding:1.25rem;
     }
     [class*="st-key-rb_card_neutral_knowledge_map_header"]{margin-bottom:1rem;box-shadow:none;}
-    [class*="st-key-rb_card_neutral_knowledge_map_graph"]{min-height:610px;overflow:hidden;
+    [class*="st-key-rb_kmap_layout"]>div>[data-testid="stHorizontalBlock"]{align-items:stretch;}
+    [class*="st-key-rb_kmap_layout"]>div>[data-testid="stHorizontalBlock"]>[data-testid="stColumn"]{min-width:0;}
+    [class*="st-key-rb_card_neutral_knowledge_map_graph"],
+    [class*="st-key-rb_insight_neutral_knowledge_map_inspector"]{box-sizing:border-box;height:760px;margin:0;}
+    [class*="st-key-rb_card_neutral_knowledge_map_graph"]{overflow:hidden;
       background-color:#fffdfa;background-image:radial-gradient(#DDE1E8 1px,transparent 1px);background-size:18px 18px;}
-    [class*="st-key-rb_card_neutral_knowledge_map_legend"]{margin-top:1rem;padding:.9rem 1rem;box-shadow:none;}
-    [class*="st-key-rb_insight_neutral_knowledge_map_inspector"]{height:100%;}
+    [class*="st-key-rb_insight_neutral_knowledge_map_inspector"]{overflow-y:auto;}
     .rb-kmap-panel-title{display:flex;align-items:center;gap:9px;margin-bottom:1rem;color:#17233A;font-weight:800;}
     .rb-kmap-topic-title{margin:.65rem 0 .6rem!important;color:#17233A!important;font-size:1.35rem!important;}
-    .rb-kmap-legend{display:flex;align-items:center;gap:14px;flex-wrap:wrap;font-size:.78rem;color:#667085;}
+    .rb-kmap-legend{display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+      margin-top:.5rem;font-size:.78rem;color:#667085;}
     .rb-kmap-legend strong{color:#17233A;margin-right:4px}.rb-kmap-legend span{display:inline-flex;align-items:center;gap:6px;}
     .rb-kmap-legend i{width:10px;height:10px;border-radius:50%;display:inline-block;}
     .rb-kmap-legend .foundation{background:#62C989}.rb-kmap-legend .intermediate{background:#5AA9E6}
@@ -2784,15 +2774,17 @@ def page_knowledge_map():
     @media(max-width:950px){
       [class*="st-key-rb_kmap_layout"]>div>[data-testid="stHorizontalBlock"]{flex-direction:column;}
       [class*="st-key-rb_kmap_layout"]>div>[data-testid="stHorizontalBlock"]>[data-testid="stColumn"]{width:100%!important;flex:1 1 100%!important;}
+      [class*="st-key-rb_card_neutral_knowledge_map_graph"],
+      [class*="st-key-rb_insight_neutral_knowledge_map_inspector"]{height:auto;min-height:520px;}
     }
     @media(max-width:700px){
       [class*="st-key-rb_page_knowledge_map"]{padding:.5rem 0 1rem;overflow-x:hidden;}
-      [class*="st-key-rb_card_neutral_knowledge_map_graph"]{min-height:520px;padding:.8rem;}
+      [class*="st-key-rb_card_neutral_knowledge_map_graph"]{padding:.8rem;}
     }
     </style>""", unsafe_allow_html=True)
     with _page_shell("knowledge_map"):
         with _card("knowledge_map_header"):
-            _page_header("Knowledge Map", "Explore how concepts connect and build on one another.",
+            _plain_page_header("Knowledge Map", "Explore how concepts connect and build on one another.",
                          icon_name="book")
     sections = st.session_state.get("sections") or []
     graph = st.session_state.get("prerequisites", {})
@@ -2882,7 +2874,7 @@ def render_diagnostic_question(questions):
         with _card("diagnostic_header"):
             header = st.columns([3.2, 2.7, 2.5], gap="large", vertical_alignment="center")
             with header[0]:
-                _page_header(
+                _plain_page_header(
                     "Diagnostic Test",
                     "Assess your current understanding",
                     icon_name="clipboard",
@@ -2985,7 +2977,7 @@ def render_diagnostic_results(questions, results):
         with _card("diagnostic_results_header"):
             header = st.columns([3.2, 2.2], gap="large")
             with header[0]:
-                _page_header(
+                _plain_page_header(
                     "Diagnostic Results",
                     "Review your performance and AI feedback",
                     icon_name="clipboard",
@@ -3358,14 +3350,25 @@ def page_study_plan():
     [class*="st-key-rb_card_neutral_study_plan_day_header"], [class*="st-key-rb_card_"].st-key-unused{
       border:1px solid var(--rb-neutral-border);border-radius:20px;background:rgba(255,255,255,.94);box-shadow:var(--rb-shadow-card);}
     [class*="st-key-rb_card_neutral_study_plan_header"]{padding:1.05rem 1.2rem;margin-bottom:1rem;box-shadow:none;}
-    [class*="st-key-rb_card_neutral_study_plan_sidebar"]{padding:1rem;height:100%;}
+    [class*="st-key-rb_card_neutral_study_plan_sidebar"]{padding:1rem;height:fit-content;}
     [class*="st-key-rb_card_neutral_study_plan_day_header"]{padding:1rem 1.15rem;margin-bottom:1rem;box-shadow:none;}
     [class*="st-key-rb_card_green_study_session_"], [class*="st-key-rb_card_blue_study_session_"],
     [class*="st-key-rb_card_amber_study_session_"], [class*="st-key-rb_card_purple_study_session_"],
     [class*="st-key-rb_card_coral_study_session_"]{height:100%;padding:1rem;border-radius:18px;background:#fff;
       border:1px solid var(--rb-neutral-border);box-shadow:0 7px 24px rgba(23,35,58,.05);}
-    .rb-plan-month-title{margin-bottom:.75rem;font-weight:820;color:#17233A}.rb-plan-weekday{text-align:center;color:#98A2B3;font-size:.68rem;font-weight:750;}
-    [class*="st-key-sp_cal_"] button{min-height:32px;padding:2px;border-color:transparent!important;font-size:.72rem;}
+    .rb-plan-month-title{margin-bottom:.45rem;font-weight:820;color:#17233A}
+    [class*="st-key-rb_card_neutral_study_plan_sidebar"] [data-testid="stHorizontalBlock"]:has(.rb-plan-weekday),
+    [class*="st-key-rb_card_neutral_study_plan_sidebar"] [data-testid="stHorizontalBlock"]:has([class*="st-key-sp_cal_"]){
+      display:grid!important;grid-template-columns:repeat(7,minmax(24px,1fr))!important;gap:3px!important;width:100%;
+    }
+    [class*="st-key-rb_card_neutral_study_plan_sidebar"] [data-testid="stHorizontalBlock"]:has(.rb-plan-weekday)>[data-testid="stColumn"],
+    [class*="st-key-rb_card_neutral_study_plan_sidebar"] [data-testid="stHorizontalBlock"]:has([class*="st-key-sp_cal_"])>[data-testid="stColumn"]{
+      width:auto!important;min-width:0!important;flex:none!important;
+    }
+    .rb-plan-weekday{text-align:center;color:#98A2B3;font-size:.68rem;font-weight:750;line-height:1;white-space:nowrap;}
+    [class*="st-key-sp_cal_"] button{width:100%;min-width:24px;min-height:28px;aspect-ratio:1/1;padding:0 2px;
+      border-color:transparent!important;font-size:.72rem;line-height:1!important;white-space:nowrap!important;
+      word-break:normal!important;overflow:hidden;text-align:center;}
     [class*="st-key-sp_cal_"] button[kind="primary"]{box-shadow:0 5px 14px rgba(250,133,90,.22);}
     .rb-plan-day-title{font-size:1.3rem;font-weight:820;color:#17233A}.rb-plan-focus{margin-top:5px;color:#667085;font-size:.82rem;}
     .rb-plan-session-head{display:flex;align-items:center;gap:12px;min-height:62px}.rb-plan-session-icon{display:flex;align-items:center;justify-content:center;
@@ -3385,10 +3388,10 @@ def page_study_plan():
 
     with _page_shell("study_plan_day"):
         with _card("study_plan_header"):
-            _page_header("Study Plan", "Your adaptive schedule, focused one day at a time.",
-                         icon_name="calendar", badge_text="STUDY PLAN DAY VIEW V2", badge_tone="coral")
+            _plain_page_header("Study Plan", "Your adaptive schedule, focused one day at a time.",
+                         icon_name="calendar")
         with st.container(key="rb_study_plan_layout"):
-            sidebar, main = st.columns([1.1, 3.9], gap="large")
+            sidebar, main = st.columns([1.4, 3.6], gap="large")
         with sidebar:
             with _card("study_plan_sidebar"):
                 _render_study_month_calendar(selected, set(available), today)
@@ -3501,7 +3504,7 @@ def render_recovery_dashboard():
 
     with _page_shell("recovery_v2"):
         with _card("recovery_header"):
-            _page_header(
+            _plain_page_header(
                 "Recovery",
                 "Mark unavailable days and preview a realistic rebuilt plan before applying any changes.",
                 icon_name="recovery",
@@ -3757,7 +3760,6 @@ def render_about_split_layout():
         with left:
             st.markdown(f"<div class='rb-about-brand'>{render_rebound_logo()}</div>", unsafe_allow_html=True)
             st.markdown(
-                f"<div class='rb-about-kicker'>{_icon('info', 15, '#8a3b1e', 2)}<span>About Rebound</span></div>"
                 "<div class='rb-about-headline'>How Rebound helps you recover and perform your best.</div>"
                 "<div class='rb-about-copy'>Rebound turns uploaded revision notes into an adaptive study plan, uses your progress and availability to guide priorities, and lets you preview recovery changes before applying them.</div>",
                 unsafe_allow_html=True,
