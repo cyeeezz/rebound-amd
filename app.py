@@ -495,6 +495,116 @@ def _normalize_api_sections(raw_sections: list) -> list[dict]:
     return sections
 
 
+class FireworksResponseError(RuntimeError):
+    """Raised when Fireworks returns content that cannot be used safely."""
+
+
+def _first_complete_json_object(content: str) -> str | None:
+    """Return the first balanced top-level JSON object, respecting JSON strings."""
+    start = content.find("{")
+    while start != -1:
+        depth = 0
+        in_string = False
+        escaped = False
+        for index in range(start, len(content)):
+            char = content[index]
+            if in_string:
+                if escaped:
+                    escaped = False
+                elif char == "\\":
+                    escaped = True
+                elif char == '"':
+                    in_string = False
+                continue
+            if char == '"':
+                in_string = True
+            elif char == "{":
+                depth += 1
+            elif char == "}":
+                depth -= 1
+                if depth == 0:
+                    return content[start:index + 1]
+        start = content.find("{", start + 1)
+    return None
+
+
+def parse_json_response_content(content: str) -> dict:
+    """Parse and validate a Fireworks JSON object without accepting bad output."""
+    if content is None:
+        raise FireworksResponseError("Fireworks returned no response content.")
+    if not isinstance(content, str):
+        raise FireworksResponseError(
+            f"Fireworks returned unsupported content type: {type(content).__name__}."
+        )
+    cleaned = content.strip()
+    if not cleaned:
+        raise FireworksResponseError("Fireworks returned an empty response.")
+
+    candidates = [cleaned]
+    fence = re.fullmatch(r"```(?:json)?\s*(.*?)\s*```", cleaned, flags=re.I | re.S)
+    if fence:
+        candidates.append(fence.group(1).strip())
+    extracted = _first_complete_json_object(cleaned)
+    if extracted and extracted not in candidates:
+        candidates.append(extracted)
+
+    last_error = None
+    for candidate in candidates:
+        try:
+            payload = json.loads(candidate)
+        except json.JSONDecodeError as exc:
+            last_error = exc
+            continue
+        if not isinstance(payload, dict):
+            raise FireworksResponseError("Fireworks JSON response must be an object.")
+        sections = payload.get("sections")
+        if not isinstance(sections, list):
+            raise FireworksResponseError("Fireworks JSON response is missing a sections list.")
+        if not sections:
+            raise FireworksResponseError("Fireworks returned an empty sections list.")
+        return payload
+
+    detail = str(last_error) if last_error else "no complete JSON object was found"
+    raise FireworksResponseError(f"Fireworks returned malformed JSON: {detail}")
+
+
+def _fireworks_response_content(response, active_model: str, attempt: int) -> str:
+    """Validate a chat response and log bounded, non-secret diagnostics."""
+    returned_model = getattr(response, "model", None) or active_model
+    choices = getattr(response, "choices", None)
+    response_error = getattr(response, "error", None)
+    if response_error:
+        print(f"[Rebound] Fireworks response error: {str(response_error)[:500]}")
+    if not choices:
+        print(f"[Rebound] Fireworks response received (attempt {attempt}) — model={returned_model}; choices=0")
+        raise FireworksResponseError("Fireworks returned no response choices.")
+    choice = choices[0]
+    finish_reason = getattr(choice, "finish_reason", None) or "not captured"
+    message = getattr(choice, "message", None)
+    if message is None:
+        print(f"[Rebound] Fireworks response received (attempt {attempt}) — model={returned_model}; "
+              f"finish_reason={finish_reason}; message=missing")
+        raise FireworksResponseError("Fireworks returned a choice without a message.")
+    refusal = getattr(message, "refusal", None)
+    if refusal:
+        print(f"[Rebound] Fireworks refusal: {str(refusal)[:500]}")
+    content = getattr(message, "content", None)
+    if content is None:
+        content_length = 0
+        preview = ""
+    elif isinstance(content, str):
+        content_length = len(content)
+        preview = content[:500]
+    else:
+        content_length = len(str(content))
+        preview = str(content)[:500]
+    print(f"[Rebound] Fireworks response received (attempt {attempt}) — model={returned_model}; "
+          f"finish_reason={finish_reason}; content_length={content_length}")
+    if preview:
+        print(f"[Rebound] Fireworks content preview (first 500 chars): {preview}")
+    return content
+
+
 _DOC_ANALYSIS_SYSTEM_PROMPT = (
     "You are an expert biology study assistant. Split the student's revision "
     "notes into coherent LEARNING TOPICS. Each topic must be a real biology "
@@ -539,18 +649,47 @@ def analyze_document_with_fireworks(text: str, model: dict = FIREWORKS_MODEL) ->
         for ci, chunk in enumerate(chunks, 1):
             if len(chunks) > 1:
                 print(f"[Rebound] Analysing chunk {ci}/{len(chunks)} ({len(chunk)} chars)...")
-            response = client.chat.completions.create(
-                model=active,
-                response_format={"type": "json_object"},
-                temperature=0.2,
-                messages=[
-                    {"role": "system", "content": _DOC_ANALYSIS_SYSTEM_PROMPT},
-                    {"role": "user", "content": chunk},
-                ],
-            )
-            returned_model = getattr(response, "model", None) or active
-            payload = json.loads(response.choices[0].message.content)
-            for sec in _normalize_api_sections(payload.get("sections", [])):
+            payload = None
+            normalized = []
+            for attempt in (1, 2):
+                request_kwargs = {
+                    "model": active,
+                    "temperature": 0.1 if attempt == 1 else 0,
+                    "messages": [
+                        {
+                            "role": "system",
+                            "content": _DOC_ANALYSIS_SYSTEM_PROMPT + (
+                                " Return only valid JSON. Do not use Markdown code fences."
+                                if attempt == 2 else ""
+                            ),
+                        },
+                        {"role": "user", "content": chunk},
+                    ],
+                }
+                if attempt == 1:
+                    request_kwargs["response_format"] = {"type": "json_object"}
+                try:
+                    response = client.chat.completions.create(**request_kwargs)
+                    returned_model = getattr(response, "model", None) or active
+                    content = _fireworks_response_content(response, active, attempt)
+                    payload = parse_json_response_content(content)
+                    normalized = _normalize_api_sections(payload["sections"])
+                    if not normalized:
+                        raise FireworksResponseError(
+                            "Fireworks sections contained no valid title/body entries."
+                        )
+                    print(f"[Rebound] Fireworks JSON parse succeeded on attempt {attempt} "
+                          f"for chunk {ci}/{len(chunks)} ({len(normalized)} sections).")
+                    break
+                except FireworksResponseError as exc:
+                    print(f"[Rebound] Fireworks parse failure on attempt {attempt} "
+                          f"for chunk {ci}/{len(chunks)}: {exc}")
+                    if attempt == 2:
+                        raise FireworksResponseError(
+                            f"Fireworks returned an invalid response after one retry: {exc}"
+                        ) from exc
+                    print("[Rebound] Retrying once without response_format and with a stricter JSON prompt.")
+            for sec in normalized:
                 key = sec["title"].lower()
                 if key in merged:
                     merged[key]["body"] += "\n" + sec["body"]
@@ -1922,11 +2061,11 @@ def apply_recovery(preview) -> list:
 # ---------------------------------------------------------------------------
 # Backend logic above is untouched. This layer renders + orchestrates it.
 
-PAGES = ["Home", "Setup", "Knowledge Map", "Diagnostic", "Study Plan",
+PAGES = ["Home", "Knowledge Map", "Diagnostic", "Study Plan",
          "Recovery", "About Rebound"]   # Progress intentionally not in nav
 
 _UI_DEFAULTS = {
-    "nav_radio": "Home", "active_session": None, "diag_step": 0,
+    "nav_radio": "Setup", "active_session": None, "diag_step": 0,
     "initial_mastery": None, "kmap_view": "Topic cards", "diag_answers": {},
     "diag_review_sel": 0, "kmap_sel_topic": None, "theme": "light",
     "week_offset": 0, "student_name": "",
@@ -1935,6 +2074,10 @@ for _k, _v in _UI_DEFAULTS.items():
     st.session_state.setdefault(_k, _v)
 
 def _nav_to(page):
+    if page == "Setup" and st.session_state.get("sections"):
+        st.session_state["_setup_reentry"] = True
+    elif page != "Setup":
+        st.session_state.pop("_setup_reentry", None)
     st.session_state["_pending_nav"] = page
     st.rerun()
 
@@ -2068,33 +2211,38 @@ def render_today_session_card(session, status, all_days, expanded=False, keypref
     tone, _, fg = _topic_tint(topic)
     topic_token = hashlib.sha1(str(topic).encode("utf-8")).hexdigest()[:10]
     topic_html = html.escape(str(topic))
-    difficulty = _section_for(topic).get("estimated_difficulty", "")
-    difficulty_html = html.escape(str(difficulty))
+    section = _section_for(topic)
+    difficulty = section.get("estimated_difficulty", "")
+    subject = st.session_state.get("subject", "")
+    date_label = session.get("date_label", "")
+    description_points = _key_points(topic, 3 if expanded else 1)
+    description = ", ".join(str(point) for point in description_points)
+    if not description:
+        description = str(session.get("reason", ""))
     with st.container(border=True, key=f"home_session_{tone}_{topic_token}"):
         st.markdown(
+            f"<div class='rb-home-session-shell {'expanded' if expanded else 'compact'}'>"
             "<div class='rb-home-session-top'>"
             f"<div class='rb-home-topic-icon' style='color:{fg}'>"
-            f"{_icon('book', 21, fg, 1.9)}</div>"
+            f"{_icon('book', 25 if expanded else 22, fg, 1.9)}</div>"
             "<div class='rb-home-session-heading'>"
             f"<div class='rb-home-session-title' style='color:{fg}'>{topic_html}</div>"
-            f"<div class='rb-home-session-meta'>{session['duration']} min"
-            f"{' · ' + difficulty_html if difficulty_html else ''}</div></div>"
+            "<div class='rb-home-session-meta'>"
+            f"{_icon('calendar', 13, '#667085', 1.8)} {html.escape(str(date_label))}"
+            f" <span>•</span> {_icon('clock', 13, '#667085', 1.8)} {session['duration']} min"
+            f"{' <span>•</span> ' + html.escape(str(difficulty)) if difficulty else ''}</div>"
+            f"<div class='rb-home-session-description'>{html.escape(description)}</div>"
+            f"<div class='rb-home-subject'>{_badge(subject, tone if tone in ('green', 'blue', 'amber', 'purple') else 'coral') if subject else ''}</div>"
+            "</div>"
             "<div class='rb-home-session-badges'>"
             f"{_priority_chip(session.get('priority', 'Medium'))} {_status_chip(state)}"
-            "</div></div>",
+            "</div></div></div>",
             unsafe_allow_html=True,
         )
-        pts = _key_points(topic, 3 if expanded else 2)
-        if pts:
-            points_html = html.escape(", ".join(str(point) for point in pts))
-            st.markdown(
-                f"<div class='rb-home-session-points'>{points_html}</div>",
-                unsafe_allow_html=True,
-            )
         show = expanded or st.session_state.get(f"open_{keyprefix}{topic}", False)
         if not expanded:
             if st.button(
-                "Open" if not show else "Close", key=f"tog_{keyprefix}{topic}",
+                "Open session" if not show else "Close session", key=f"tog_{keyprefix}{topic}",
                 use_container_width=True,
             ):
                 st.session_state[f"open_{keyprefix}{topic}"] = not show
@@ -2170,8 +2318,13 @@ def _run_analysis(pdf, subject, exam_date, daily):
         try:
             raw = analyze_document_with_fireworks(text, FIREWORKS_MODEL)
         except Exception as exc:
-            box.update(label="Fireworks analysis failed", state="error")
-            st.error(f"Fireworks analysis failed: {exc}")
+            print(f"[Rebound] Setup analysis failure: {type(exc).__name__}: {exc}")
+            if isinstance(exc, FireworksResponseError):
+                box.update(label="AI analysis returned an invalid response", state="error")
+                st.error("AI analysis returned an invalid response. Please try again.")
+            else:
+                box.update(label="Fireworks request failed", state="error")
+                st.error(f"Fireworks request failed: {exc}")
             st.info("Set DEBUG_OFFLINE=1 to use local analysis for offline development.")
             return
         sections = parse_fireworks_response(raw)
@@ -2316,17 +2469,8 @@ def page_home():
         0,
     )
     tmin = sum(s["duration"] for s in todays)
-    today_iso = date.today().isoformat()
-    overdue = sum(
-        1 for session in plan
-        if session.get("date", today_iso) < today_iso
-        and status.get(session["topic"]) not in ("completed", "skipped")
-    )
-    skipped = prog.get("skipped", 0)
-    recovery_relevant = bool(skipped or overdue or st.session_state.get("recovery_preview"))
-
     with st.container(key="home_dashboard"):
-        main, side = st.columns([2.6, 1], gap="large", vertical_alignment="top")
+        main, side = st.columns([7, 3], gap="large", vertical_alignment="top")
         with main:
             with st.container(key="home_main"):
                 st.markdown(
@@ -2338,6 +2482,7 @@ def page_home():
                     "</div>"
                     "<div class='rb-home-subtitle'>Your personalised plan for today.</div>"
                     "</div>"
+                    f"<div class='rb-home-rebuild-badge'>{_badge('HOME DASHBOARD REBUILD', 'coral')}</div>"
                     f"<div class='rb-home-count'><strong>{len(todays)}</strong> "
                     f"session{'s' if len(todays) != 1 else ''} today</div></div>",
                     unsafe_allow_html=True,
@@ -2367,18 +2512,21 @@ def page_home():
                         "<span>Exam Countdown</span></div>",
                         unsafe_allow_html=True,
                     )
+                    exam_copy = "Set an exam date in Setup."
                     if exam:
                         try:
                             days = max((exam - date.today()).days, 0)
                             st.markdown(
-                                f"<div class='rb-home-metric'>{days} days</div>",
+                                "<div class='rb-home-rail-visual-row'>"
+                                f"<div><div class='rb-home-metric'>{days} days</div>"
+                                f"<div class='rb-home-metric-caption'>until {html.escape(str(st.session_state.get('subject', 'your exam')))}</div></div>"
+                                f"<div class='rb-home-calendar-art'>{_icon('calendar', 27, '#FA855A', 1.9)}</div></div>",
                                 unsafe_allow_html=True,
                             )
-                            st.caption(f"until {st.session_state.get('subject', 'your exam')}")
                         except Exception:
-                            st.caption("Set an exam date in Setup.")
+                            st.caption(exam_copy)
                     else:
-                        st.caption("Set an exam date in Setup.")
+                        st.caption(exam_copy)
 
                 with st.container(border=True, key="home_rail_time"):
                     st.markdown(
@@ -2387,10 +2535,14 @@ def page_home():
                         unsafe_allow_html=True,
                     )
                     st.markdown(
-                        f"<div class='rb-home-metric'>{tmin // 60}h {tmin % 60}m</div>",
+                        "<div class='rb-home-rail-visual-row'>"
+                        f"<div><div class='rb-home-metric'>{tmin // 60}h {tmin % 60}m</div>"
+                        "<div class='rb-home-metric-caption'>of focused study</div></div>"
+                        "<svg class='rb-home-sparkline' viewBox='0 0 120 50' aria-hidden='true'>"
+                        "<path d='M3 42 C18 43 20 30 33 31 S49 45 62 25 S79 38 91 18 S106 28 117 5'/>"
+                        "<circle cx='117' cy='5' r='4'/></svg></div>",
                         unsafe_allow_html=True,
                     )
-                    st.caption("of focused study")
 
                 with st.container(border=True, key="home_rail_progress"):
                     st.markdown(
@@ -2399,33 +2551,16 @@ def page_home():
                         unsafe_allow_html=True,
                     )
                     st.markdown(
-                        f"<div class='rb-home-metric'>{prog['pct']:.0%} complete</div>",
+                        "<div class='rb-home-progress-layout'>"
+                        f"<div class='rb-home-progress-ring' style='--progress:{prog['pct'] * 360:.1f}deg'>"
+                        f"<div><strong>{prog['pct']:.0%}</strong><span>Complete</span></div></div>"
+                        "<div class='rb-home-progress-legend'>"
+                        f"<span><i class='completed'></i><strong>{prog['completed']}</strong> Completed</span>"
+                        f"<span><i class='active'></i><strong>{active}</strong> In progress</span>"
+                        f"<span><i class='planned'></i><strong>{planned}</strong> Planned</span>"
+                        "</div></div>",
                         unsafe_allow_html=True,
                     )
-                    st.progress(prog["pct"])
-                    st.caption(
-                        f"{prog['completed']} completed · {active} in progress · {planned} planned"
-                    )
-
-                if recovery_relevant:
-                    with st.container(border=True, key="home_rail_recovery"):
-                        st.markdown(
-                            f"<div class='rb-home-rail-title accent-coral'>{_icon('recovery', 17, '#C93638', 1.9)}"
-                            "<span>Recovery Alert</span></div>",
-                            unsafe_allow_html=True,
-                        )
-                        recovery_notes = []
-                        if skipped:
-                            recovery_notes.append(
-                                f"{skipped} skipped session{'s' if skipped != 1 else ''}"
-                            )
-                        if overdue:
-                            recovery_notes.append(
-                                f"{overdue} overdue session{'s' if overdue != 1 else ''}"
-                            )
-                        if st.session_state.get("recovery_preview"):
-                            recovery_notes.append("Recovery preview ready")
-                        st.caption(" · ".join(recovery_notes))
 
                 with st.container(border=True, key="home_rail_quick"):
                     st.markdown(
@@ -3727,20 +3862,31 @@ if st.session_state.get("_pending_nav"):
     st.session_state["nav_radio"] = st.session_state.pop("_pending_nav")
 
 _inject_css()
-render_topbar()
-_page = st.session_state["nav_radio"]
+_setup_complete = bool(st.session_state.get("sections"))
+_setup_reentry = bool(st.session_state.get("_setup_reentry"))
 
-if st.session_state.get("active_session"):
-    render_focus_view()
+if not _setup_complete or _setup_reentry:
+    # Standalone onboarding deliberately omits the entire main-app shell.
+    st.session_state["nav_radio"] = "Setup"
+    page_setup()
 else:
-    _msg = _lock_message(_page)
-    if _msg:
-        _page_title(_page)
-        with st.container(border=True):
-            st.info(_msg)
-            _target = ("Setup" if _page in ("Knowledge Map", "Diagnostic")
-                       else "Diagnostic" if _page == "Study Plan" else "Study Plan")
-            if st.button(f"Go to {_target}", type="primary", key="lock_go"):
-                _nav_to(_target)
+    # A completed session with a stale Setup route enters the intended next step.
+    if st.session_state.get("nav_radio") == "Setup":
+        st.session_state["nav_radio"] = "Knowledge Map"
+    render_topbar()
+    _page = st.session_state["nav_radio"]
+
+    if st.session_state.get("active_session"):
+        render_focus_view()
     else:
-        _PAGE_FUNCS[_page]()
+        _msg = _lock_message(_page)
+        if _msg:
+            _page_title(_page)
+            with st.container(border=True):
+                st.info(_msg)
+                _target = ("Setup" if _page in ("Knowledge Map", "Diagnostic")
+                           else "Diagnostic" if _page == "Study Plan" else "Study Plan")
+                if st.button(f"Go to {_target}", type="primary", key="lock_go"):
+                    _nav_to(_target)
+        else:
+            _PAGE_FUNCS[_page]()

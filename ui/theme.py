@@ -214,10 +214,12 @@ div[role="radiogroup"] label:has(input:checked) {{ color:var(--primary); border-
 }}
 
 /* Home dashboard --------------------------------------------------------- */
-.st-key-home_dashboard {{ width:100%; max-width:100%; margin-top:.65rem; }}
+.st-key-home_dashboard {{ width:100%; max-width:1500px; margin:.8rem auto 1.5rem; }}
 .st-key-home_dashboard [data-testid="stColumn"] {{ min-width:0; }}
+.st-key-home_main {{ padding:1.25rem !important; border:1px solid var(--border); border-radius:22px;
+  background:rgba(255,255,255,.88); box-shadow:0 12px 38px rgba(23,35,58,.055); }}
 .rb-home-study-header {{
-  display:flex; align-items:center; gap:14px; min-width:0; margin:2px 0 18px;
+  display:flex; align-items:center; gap:14px; min-width:0; margin:2px 0 22px;
 }}
 .rb-home-heading-icon {{
   display:flex; flex:0 0 auto; align-items:center; justify-content:center;
@@ -235,15 +237,17 @@ div[role="radiogroup"] label:has(input:checked) {{ color:var(--primary); border-
   border-radius:999px; background:var(--surface); color:var(--text-muted) !important;
   font-size:.78rem; white-space:nowrap;
 }}
+.rb-home-rebuild-badge {{ flex:0 0 auto; margin-left:auto; }}
 .rb-home-count strong {{
   display:inline-flex; align-items:center; justify-content:center; min-width:23px; height:23px;
   margin-right:4px; border-radius:50%; background:rgba(23,35,58,.055);
 }}
 div[data-testid="stVerticalBlockBorderWrapper"]:has([class*="st-key-home_session_"]) {{
-  overflow:hidden; margin-bottom:11px; border-radius:20px !important;
-  box-shadow:0 7px 22px rgba(23,35,58,.045) !important;
+  overflow:hidden; margin-bottom:13px; border:1px solid rgba(23,35,58,.075) !important;
+  border-radius:20px !important; box-shadow:0 8px 25px rgba(23,35,58,.05) !important;
 }}
-[class*="st-key-home_session_"] {{ padding:1rem 1.05rem !important; }}
+[class*="st-key-home_session_"] {{ padding:1.05rem 1.15rem !important; }}
+[class*="st-key-home_session_"]:has(.rb-home-session-shell.expanded) {{ padding:1.3rem 1.4rem !important; }}
 [class*="st-key-home_session_green_"] {{ background:rgba(232,247,222,.66) !important; }}
 [class*="st-key-home_session_blue_"] {{ background:rgba(224,243,250,.72) !important; }}
 [class*="st-key-home_session_amber_"] {{ background:rgba(255,241,211,.72) !important; }}
@@ -252,21 +256,24 @@ div[data-testid="stVerticalBlockBorderWrapper"]:has([class*="st-key-home_session
 .rb-home-session-top {{ display:flex; align-items:center; gap:12px; min-width:0; }}
 .rb-home-topic-icon {{
   display:flex; flex:0 0 auto; align-items:center; justify-content:center;
-  width:42px; height:42px; border:1px solid currentColor; border-radius:50%; opacity:.92;
+  width:52px; height:52px; border:1px solid rgba(255,255,255,.7); border-radius:50%;
+  background:rgba(255,255,255,.48); box-shadow:inset 0 0 0 1px rgba(23,35,58,.035); opacity:.96;
 }}
+.rb-home-session-shell.expanded .rb-home-topic-icon {{ width:62px; height:62px; }}
 .rb-home-session-heading {{ flex:1 1 auto; min-width:0; }}
 .rb-home-session-title {{
   font-size:1.08rem; font-weight:800; line-height:1.25; overflow-wrap:anywhere;
 }}
 .rb-home-session-meta {{ margin-top:3px; color:var(--text-muted) !important; font-size:.76rem; }}
+.rb-home-session-meta svg {{ margin-right:3px; }}
+.rb-home-session-meta span {{ padding:0 4px; color:var(--text-muted) !important; }}
 .rb-home-session-badges {{
   display:flex; flex:0 0 auto; flex-wrap:wrap; justify-content:flex-end; gap:4px;
 }}
-.rb-home-session-points {{
-  margin:9px 0 10px 54px; color:var(--text-muted) !important;
-  font-size:.83rem; line-height:1.5; overflow-wrap:anywhere;
-}}
-[class*="st-key-home_actions_"] {{ margin-top:3px; }}
+.rb-home-session-description {{ margin-top:7px; color:var(--text-muted) !important;
+  font-size:.82rem; line-height:1.5; overflow-wrap:anywhere; }}
+.rb-home-subject {{ margin-top:8px; }}
+[class*="st-key-home_actions_"] {{ margin:10px 0 2px 74px; }}
 [class*="st-key-home_actions_"] [data-testid="stPopover"] button {{ width:100%; min-height:42px; }}
 [class*="st-key-home_session_"] [data-testid="stExpander"] {{
   margin-top:8px; border-color:rgba(23,35,58,.10); border-radius:12px;
@@ -282,10 +289,10 @@ div[data-testid="stVerticalBlockBorderWrapper"]:has(.st-key-home_empty_state) {{
 .rb-home-empty-title {{ font-size:1rem; font-weight:800; }}
 .rb-home-empty-copy {{ margin-top:5px; color:var(--text-muted) !important; font-size:.84rem; }}
 div[data-testid="stVerticalBlockBorderWrapper"]:has([class*="st-key-home_rail_"]) {{
-  margin-bottom:12px; border-radius:20px !important;
-  box-shadow:0 7px 22px rgba(23,35,58,.05) !important;
+  margin-bottom:14px; border:1px solid var(--border) !important; border-radius:20px !important;
+  background:rgba(255,255,255,.92); box-shadow:0 8px 28px rgba(23,35,58,.055) !important;
 }}
-[class*="st-key-home_rail_"] {{ padding:1rem 1.05rem !important; }}
+[class*="st-key-home_rail_"] {{ padding:1.2rem 1.25rem !important; }}
 .rb-home-rail-title {{
   display:flex; align-items:center; gap:8px; margin-bottom:13px;
   font-size:.9rem; font-weight:800;
@@ -297,8 +304,26 @@ div[data-testid="stVerticalBlockBorderWrapper"]:has([class*="st-key-home_rail_"]
   margin:0 0 2px; font-family:Inter,Arial,sans-serif; font-size:1.75rem;
   font-weight:820; letter-spacing:-.035em;
 }}
-.st-key-home_rail_progress [data-testid="stProgressBar"] {{ margin:.5rem 0 .65rem; }}
-.st-key-home_rail_recovery {{ background:rgba(250,133,90,.045) !important; }}
+.rb-home-metric-caption {{ margin-top:4px; color:var(--text-muted) !important; font-size:.76rem; }}
+.rb-home-rail-visual-row {{ display:flex; align-items:center; justify-content:space-between; gap:14px; }}
+.rb-home-calendar-art {{ display:flex; align-items:center; justify-content:center; width:62px; height:62px;
+  flex:0 0 auto; border-radius:50%; background:rgba(250,133,90,.11); }}
+.rb-home-sparkline {{ width:112px; height:50px; overflow:visible; }}
+.rb-home-sparkline path {{ fill:none; stroke:#45B957; stroke-width:2.4; stroke-linecap:round; }}
+.rb-home-sparkline circle {{ fill:#45B957; }}
+.rb-home-progress-layout {{ display:flex; align-items:center; gap:18px; }}
+.rb-home-progress-ring {{ display:grid; place-items:center; width:112px; height:112px; flex:0 0 auto;
+  border-radius:50%; background:conic-gradient(#54BE62 var(--progress),#D9EFF8 0); }}
+.rb-home-progress-ring::before {{ content:""; grid-area:1/1; width:86px; height:86px; border-radius:50%; background:#fff; }}
+.rb-home-progress-ring>div {{ z-index:1; grid-area:1/1; display:flex; flex-direction:column; align-items:center; }}
+.rb-home-progress-ring strong {{ font-size:1.45rem; line-height:1; }}
+.rb-home-progress-ring span {{ margin-top:5px; color:var(--text-muted) !important; font-size:.66rem; }}
+.rb-home-progress-legend {{ display:flex; flex-direction:column; gap:9px; min-width:0; font-size:.72rem; }}
+.rb-home-progress-legend span {{ display:grid; grid-template-columns:9px 24px 1fr; align-items:center; gap:5px; }}
+.rb-home-progress-legend i {{ width:8px; height:8px; border-radius:50%; }}
+.rb-home-progress-legend i.completed {{ background:#54BE62; }}
+.rb-home-progress-legend i.active {{ background:#5AA9E6; }}
+.rb-home-progress-legend i.planned {{ background:#B8C0CC; }}
 .st-key-home_rail_quick button {{ min-height:40px; }}
 .st-key-home_no_plan {{ padding:1.3rem !important; }}
 @media (max-width: 900px) {{
@@ -311,11 +336,13 @@ div[data-testid="stVerticalBlockBorderWrapper"]:has([class*="st-key-home_rail_"]
 }}
 @media (max-width: 650px) {{
   .rb-home-study-header {{ align-items:flex-start; flex-wrap:wrap; }}
+  .rb-home-rebuild-badge {{ margin-left:0; }}
   .rb-home-count {{ width:100%; margin-left:62px; white-space:normal; }}
   .rb-home-session-top {{ align-items:flex-start; flex-wrap:wrap; }}
   .rb-home-session-heading {{ min-width:calc(100% - 56px); }}
   .rb-home-session-badges {{ width:100%; justify-content:flex-start; margin-left:54px; }}
-  .rb-home-session-points {{ margin-left:0; }}
+  .rb-home-session-description {{ margin-left:0; }}
+  [class*="st-key-home_actions_"] {{ margin-left:0; }}
   [class*="st-key-home_actions_"] [data-testid="stHorizontalBlock"] {{ flex-direction:column; }}
   [class*="st-key-home_actions_"] [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] {{
     width:100% !important; flex:1 1 100% !important;
