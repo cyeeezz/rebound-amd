@@ -296,6 +296,7 @@ div[data-testid="stVerticalBlockBorderWrapper"]:has([class*="st-key-home_rail_"]
     width:100% !important; flex:1 1 100% !important;
   }}
 }}
+
 </style>
 """
 
