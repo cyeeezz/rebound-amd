@@ -1,0 +1,26 @@
+{
+  "project": "Rebound",
+  "operation": "Semantic topic embedding generation and relationship discovery",
+  "execution_timestamp_utc": "2026-07-11T19:50:45.441199+00:00",
+  "execution_status": "completed",
+  "input_source": "knowledge_map.json",
+  "platform": "Linux-6.8.0-79-generic-x86_64-with-glibc2.35",
+  "framework": "PyTorch and Sentence Transformers",
+  "torch_version": "2.9.1+gitff65f5b",
+  "rocm_hip_version": "7.2.53211-e1a6bc5663",
+  "gpu_available": true,
+  "gpu_count": 1,
+  "device_name": "AMD ROCm device 0",
+  "model_id": "sentence-transformers/all-MiniLM-L6-v2",
+  "topic_count": 7,
+  "embedding_dimensions": 384,
+  "relationship_count": 21,
+  "semantic_threshold": 0.3,
+  "execution_seconds": 0.010224,
+  "notebook_path": "notebooks/rebound_amd_embeddings.ipynb",
+  "artifact_files": [
+    "amd_artifacts/embeddings.npy",
+    "amd_artifacts/topic_metadata.json",
+    "amd_artifacts/amd_run_manifest.json"
+  ]
+}

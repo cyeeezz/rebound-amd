@@ -1,0 +1,368 @@
+{
+  "project": "Rebound",
+  "input_source": "knowledge_map.json",
+  "model_id": "sentence-transformers/all-MiniLM-L6-v2",
+  "topic_count": 7,
+  "embedding_dimensions": 384,
+  "topics": [
+    {
+      "index": 0,
+      "title": "Cell Structure",
+      "summary": "Learning objectives\n● Identify the main organelles found in eukaryotic cells and state their functions. ● Compare prokaryotic and eukaryotic cells.",
+      "key_concepts": [
+        "Cells",
+        "Mitochondria",
+        "Ribosomes",
+        "Learning",
+        "Identify",
+        "Compare"
+      ],
+      "semantic_relationships": [
+        {
+          "source": "Cell Structure",
+          "target": "Gene Expression",
+          "similarity": 0.5093,
+          "relationship_type": "semantic_similarity"
+        },
+        {
+          "source": "Cell Structure",
+          "target": "DNA Structure",
+          "similarity": 0.5007,
+          "relationship_type": "semantic_similarity"
+        },
+        {
+          "source": "Cell Structure",
+          "target": "Cellular Respiration",
+          "similarity": 0.4853,
+          "relationship_type": "semantic_similarity"
+        }
+      ]
+    },
+    {
+      "index": 1,
+      "title": "Cellular Respiration",
+      "summary": "Learning objectives\n● Describe the overall purpose and general equation of aerobic respiration. ● State where glycolysis and the later stages of aerobic respiration take place.",
+      "key_concepts": [
+        "Aerobic",
+        "Explain",
+        "Glycolysis",
+        "Respiration",
+        "Learning",
+        "Describe"
+      ],
+      "semantic_relationships": [
+        {
+          "source": "Cellular Respiration",
+          "target": "Energy Transfer in Cells",
+          "similarity": 0.6387,
+          "relationship_type": "semantic_similarity"
+        },
+        {
+          "source": "Cellular Respiration",
+          "target": "Gene Expression",
+          "similarity": 0.5075,
+          "relationship_type": "semantic_similarity"
+        },
+        {
+          "source": "Cellular Respiration",
+          "target": "Cell Structure",
+          "similarity": 0.4853,
+          "relationship_type": "semantic_similarity"
+        }
+      ]
+    },
+    {
+      "index": 2,
+      "title": "Energy Transfer in Cells",
+      "summary": "Learning objectives\n● Describe the roles of ATP and ADP in cells. ● Explain how ATP hydrolysis releases energy for cellular use.",
+      "key_concepts": [
+        "Explain",
+        "Learning",
+        "Describe",
+        "Identify",
+        "Explanation",
+        "Cells"
+      ],
+      "semantic_relationships": [
+        {
+          "source": "Energy Transfer in Cells",
+          "target": "Cellular Respiration",
+          "similarity": 0.6387,
+          "relationship_type": "semantic_similarity"
+        },
+        {
+          "source": "Energy Transfer in Cells",
+          "target": "Gene Expression",
+          "similarity": 0.485,
+          "relationship_type": "semantic_similarity"
+        },
+        {
+          "source": "Energy Transfer in Cells",
+          "target": "Cell Structure",
+          "similarity": 0.4752,
+          "relationship_type": "semantic_similarity"
+        }
+      ]
+    },
+    {
+      "index": 3,
+      "title": "DNA Structure",
+      "summary": "Learning objectives\n● Describe the structure of a DNA nucleotide and the double helix. ● Explain complementary base pairing and its role in accurate replication.",
+      "key_concepts": [
+        "Explain",
+        "Learning",
+        "Describe",
+        "Distinguish",
+        "Recognise",
+        "Explanation"
+      ],
+      "semantic_relationships": [
+        {
+          "source": "DNA Structure",
+          "target": "Gene Expression",
+          "similarity": 0.5102,
+          "relationship_type": "semantic_similarity"
+        },
+        {
+          "source": "DNA Structure",
+          "target": "Cell Structure",
+          "similarity": 0.5007,
+          "relationship_type": "semantic_similarity"
+        },
+        {
+          "source": "DNA Structure",
+          "target": "Genetic Inheritance",
+          "similarity": 0.4432,
+          "relationship_type": "semantic_similarity"
+        }
+      ]
+    },
+    {
+      "index": 4,
+      "title": "Gene Expression",
+      "summary": "Learning objectives\n● Describe transcription and translation, and state where each occurs. ● Explain the roles of mRNA, ribosomes, codons, and amino acids.",
+      "key_concepts": [
+        "Explain",
+        "Learning",
+        "Describe",
+        "Recognise",
+        "Understand",
+        "Explanation"
+      ],
+      "semantic_relationships": [
+        {
+          "source": "Gene Expression",
+          "target": "DNA Structure",
+          "similarity": 0.5102,
+          "relationship_type": "semantic_similarity"
+        },
+        {
+          "source": "Gene Expression",
+          "target": "Cell Structure",
+          "similarity": 0.5093,
+          "relationship_type": "semantic_similarity"
+        },
+        {
+          "source": "Gene Expression",
+          "target": "Cellular Respiration",
+          "similarity": 0.5075,
+          "relationship_type": "semantic_similarity"
+        }
+      ]
+    },
+    {
+      "index": 5,
+      "title": "Genetic Inheritance",
+      "summary": "Learning objectives\n● Define allele, genotype, and phenotype. ● Explain dominant and recessive inheritance using a Punnett-square example.",
+      "key_concepts": [
+        "Explain",
+        "Many",
+        "Learning",
+        "Define",
+        "Punnett-square",
+        "Distinguish"
+      ],
+      "semantic_relationships": [
+        {
+          "source": "Genetic Inheritance",
+          "target": "DNA Structure",
+          "similarity": 0.4432,
+          "relationship_type": "semantic_similarity"
+        },
+        {
+          "source": "Genetic Inheritance",
+          "target": "Historical Biology Experiments",
+          "similarity": 0.4399,
+          "relationship_type": "semantic_similarity"
+        },
+        {
+          "source": "Genetic Inheritance",
+          "target": "Gene Expression",
+          "similarity": 0.4346,
+          "relationship_type": "semantic_similarity"
+        }
+      ]
+    },
+    {
+      "index": 6,
+      "title": "Historical Biology Experiments",
+      "summary": "Learning objectives\n● Describe Robert Hooke's observations of cork and their significance. ● Explain what Mendel's pea-plant experiments revealed about inheritance.",
+      "key_concepts": [
+        "Franklin",
+        "Hooke",
+        "Explain",
+        "Mendel",
+        "Hershey",
+        "Chase"
+      ],
+      "semantic_relationships": [
+        {
+          "source": "Historical Biology Experiments",
+          "target": "Genetic Inheritance",
+          "similarity": 0.4399,
+          "relationship_type": "semantic_similarity"
+        },
+        {
+          "source": "Historical Biology Experiments",
+          "target": "DNA Structure",
+          "similarity": 0.4036,
+          "relationship_type": "semantic_similarity"
+        },
+        {
+          "source": "Historical Biology Experiments",
+          "target": "Gene Expression",
+          "similarity": 0.3322,
+          "relationship_type": "semantic_similarity"
+        }
+      ]
+    }
+  ],
+  "relationships": [
+    {
+      "source": "Cell Structure",
+      "target": "Gene Expression",
+      "similarity": 0.5093,
+      "relationship_type": "semantic_similarity"
+    },
+    {
+      "source": "Cell Structure",
+      "target": "DNA Structure",
+      "similarity": 0.5007,
+      "relationship_type": "semantic_similarity"
+    },
+    {
+      "source": "Cell Structure",
+      "target": "Cellular Respiration",
+      "similarity": 0.4853,
+      "relationship_type": "semantic_similarity"
+    },
+    {
+      "source": "Cellular Respiration",
+      "target": "Energy Transfer in Cells",
+      "similarity": 0.6387,
+      "relationship_type": "semantic_similarity"
+    },
+    {
+      "source": "Cellular Respiration",
+      "target": "Gene Expression",
+      "similarity": 0.5075,
+      "relationship_type": "semantic_similarity"
+    },
+    {
+      "source": "Cellular Respiration",
+      "target": "Cell Structure",
+      "similarity": 0.4853,
+      "relationship_type": "semantic_similarity"
+    },
+    {
+      "source": "Energy Transfer in Cells",
+      "target": "Cellular Respiration",
+      "similarity": 0.6387,
+      "relationship_type": "semantic_similarity"
+    },
+    {
+      "source": "Energy Transfer in Cells",
+      "target": "Gene Expression",
+      "similarity": 0.485,
+      "relationship_type": "semantic_similarity"
+    },
+    {
+      "source": "Energy Transfer in Cells",
+      "target": "Cell Structure",
+      "similarity": 0.4752,
+      "relationship_type": "semantic_similarity"
+    },
+    {
+      "source": "DNA Structure",
+      "target": "Gene Expression",
+      "similarity": 0.5102,
+      "relationship_type": "semantic_similarity"
+    },
+    {
+      "source": "DNA Structure",
+      "target": "Cell Structure",
+      "similarity": 0.5007,
+      "relationship_type": "semantic_similarity"
+    },
+    {
+      "source": "DNA Structure",
+      "target": "Genetic Inheritance",
+      "similarity": 0.4432,
+      "relationship_type": "semantic_similarity"
+    },
+    {
+      "source": "Gene Expression",
+      "target": "DNA Structure",
+      "similarity": 0.5102,
+      "relationship_type": "semantic_similarity"
+    },
+    {
+      "source": "Gene Expression",
+      "target": "Cell Structure",
+      "similarity": 0.5093,
+      "relationship_type": "semantic_similarity"
+    },
+    {
+      "source": "Gene Expression",
+      "target": "Cellular Respiration",
+      "similarity": 0.5075,
+      "relationship_type": "semantic_similarity"
+    },
+    {
+      "source": "Genetic Inheritance",
+      "target": "DNA Structure",
+      "similarity": 0.4432,
+      "relationship_type": "semantic_similarity"
+    },
+    {
+      "source": "Genetic Inheritance",
+      "target": "Historical Biology Experiments",
+      "similarity": 0.4399,
+      "relationship_type": "semantic_similarity"
+    },
+    {
+      "source": "Genetic Inheritance",
+      "target": "Gene Expression",
+      "similarity": 0.4346,
+      "relationship_type": "semantic_similarity"
+    },
+    {
+      "source": "Historical Biology Experiments",
+      "target": "Genetic Inheritance",
+      "similarity": 0.4399,
+      "relationship_type": "semantic_similarity"
+    },
+    {
+      "source": "Historical Biology Experiments",
+      "target": "DNA Structure",
+      "similarity": 0.4036,
+      "relationship_type": "semantic_similarity"
+    },
+    {
+      "source": "Historical Biology Experiments",
+      "target": "Gene Expression",
+      "similarity": 0.3322,
+      "relationship_type": "semantic_similarity"
+    }
+  ]
+}
