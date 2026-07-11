@@ -2445,8 +2445,10 @@ def page_home():
 # Knowledge Map
 # ---------------------------------------------------------------------------
 def render_topic_inspector(sections, graph, sel):
-    with st.container(border=True):
-        _section("Topic Details", "info")
+    with _sidebar_insight_card("knowledge_map_inspector"):
+        st.markdown(
+            f"<div class='rb-kmap-panel-title'>{_icon('info', 19, '#FA855A', 2)}"
+            "<span>Topic Inspector</span></div>", unsafe_allow_html=True)
         if not sel:
             st.caption("Select a topic to inspect its details.")
             return
@@ -2455,23 +2457,37 @@ def render_topic_inspector(sections, graph, sel):
         mastery = st.session_state.get("mastery_scores", {})
         tdiff = topic_difficulty_map(sections)
         pr = priority_label(calculate_priority(sel, mastery.get(sel, 0.0), graph, tdiff.get(sel, 2)))
-        st.markdown(f"### {sel}")
-        st.markdown(f"{_chip(role, 'rgba(98,196,218,.18)', '#0d5c6e')} {_priority_chip(pr)}",
+        role_label = "Advanced" if role == "End" else role
+        role_tone = {"Foundation": "green", "Intermediate": "blue", "Advanced": "purple",
+                     "Independent": "neutral"}.get(role_label, "neutral")
+        st.markdown(f"<h3 class='rb-kmap-topic-title'>{html.escape(str(sel))}</h3>",
+                    unsafe_allow_html=True)
+        st.markdown(f"{_badge(role_label, role_tone)} {_priority_chip(pr)}",
                     unsafe_allow_html=True)
         if sec.get("summary"):
             st.write(sec["summary"])
-        st.caption(f"Estimated study time: {sec.get('estimated_study_time', '—')} · "
-                   f"Difficulty: {sec.get('estimated_difficulty', '—')}")
         pre = graph.get(sel, [])
         unlocked = [t for t in [x["title"] for x in sections] if sel in graph.get(t, [])]
-        st.write("Prerequisites: " + (", ".join(pre) or "None"))
-        st.write("Topics unlocked: " + (", ".join(unlocked) or "None"))
+        mastery_value = mastery.get(sel)
+        metrics = st.columns(2, gap="small")
+        metrics[0].metric("Mastery", f"{mastery_value:.0%}" if mastery_value is not None else "Not assessed")
+        metrics[1].metric("Study time", str(sec.get("estimated_study_time", "—")))
+        st.markdown("**Prerequisites**")
+        st.write(", ".join(pre) or "None")
+        st.markdown("**Unlocks**")
+        st.write(", ".join(unlocked) or "None")
         kc = [c for c in sec.get("key_concepts", []) if c and c != "general principles"][:6]
         if kc:
-            st.markdown("**Key assessable points**")
-            st.write(", ".join(kc))
-        if sel in mastery:
-            st.caption(f"Mastery: {mastery[sel]:.0%}")
+            st.markdown("**Key concepts**")
+            for concept in kc:
+                st.markdown(f"- {html.escape(str(concept))}")
+        objectives = [o for o in sec.get("learning_objectives", []) if o]
+        if objectives:
+            with st.expander("Learning objectives"):
+                for objective in objectives:
+                    st.markdown(f"- {html.escape(str(objective))}")
+        if mastery_value is not None:
+            _progress_display(mastery_value, key="knowledge_map_mastery", label="Progress")
 
 
 def render_relationship_canvas(sections, graph):
@@ -2480,57 +2496,82 @@ def render_relationship_canvas(sections, graph):
         st.info("No topics yet. Analyse your notes in Setup first.")
         return
     edges = [(pre, t) for t in titles for pre in graph.get(t, []) if pre in titles]
-    roles = {"Foundation": "#62C4DA", "Intermediate": "#FA855A", "End": "#FFDE96", "Independent": "#A7AFBE"}
-    st.markdown("**Legend** — " + " · ".join(
-        f"<span class='rb-chip' style='background:{roles[r]};color:#0c1622'>{r}</span>"
-        for r in roles) + " &nbsp; arrows point prerequisite &rarr; dependent.",
-        unsafe_allow_html=True)
+    roles = {
+        "Foundation": "#62C989",
+        "Intermediate": "#5AA9E6",
+        "End": "#8B72E6",
+        "Independent": "#B8C0CC",
+    }
+    exam_critical = {s["title"] for s in sections if s.get("tested")}
 
-    graph_col, insp_col = st.columns([2.3, 1.2], gap="large")
+    def _node_color(topic):
+        return "#FF7A59" if topic in exam_critical else roles[classify_topic_role(topic, graph)]
+
+    with st.container(key="rb_kmap_layout"):
+        graph_col, insp_col = st.columns([2.3, 1.0], gap="large")
     clicked = None
     with graph_col:
-        rendered = False
-        try:
-            from streamlit_agraph import agraph, Node, Edge, Config
-            nodes = [Node(id=t, label=t, size=18,
-                          color=roles[classify_topic_role(t, graph)]) for t in titles]
-            ag_edges = [Edge(source=a, target=b, color="#9AA6B2") for a, b in edges]
-            cfg = Config(width="100%", height=470, directed=True, physics=True,
-                         nodeHighlightBehavior=True, highlightColor="#FA855A", collapsible=False)
-            clicked = agraph(nodes=nodes, edges=ag_edges, config=cfg)
-            rendered = True
-        except Exception as exc:
-            print(f"[Rebound] streamlit-agraph unavailable ({exc}); graphviz fallback.")
-        if not rendered:
+        with _card("knowledge_map_graph"):
+            st.markdown("<div class='rb-kmap-panel-title'><span>Relationship Map</span></div>",
+                        unsafe_allow_html=True)
+            rendered = False
             try:
-                dot = ["digraph G {", 'rankdir=LR; bgcolor="transparent";',
-                       'node [style=filled, fontname="Helvetica", fontcolor="#0c1622", '
-                       'color="#9AA6B2", shape=box];']
-                for t in titles:
-                    dot.append(f'"{t}" [fillcolor="{roles[classify_topic_role(t, graph)]}"];')
-                for a, b in edges:
-                    dot.append(f'"{a}" -> "{b}" [color="#9AA6B2"];')
-                dot.append("}")
-                st.graphviz_chart("\n".join(dot), use_container_width=True)
+                from streamlit_agraph import agraph, Node, Edge, Config
+                nodes = [Node(id=t, label=t, size=20, color=_node_color(t)) for t in titles]
+                ag_edges = [Edge(source=a, target=b, color="#C6D0DC") for a, b in edges]
+                cfg = Config(
+                    width="100%", height=520, directed=True, physics=True,
+                    nodeHighlightBehavior=True, highlightColor="#FF7A59",
+                    collapsible=False,
+                )
+                clicked = agraph(nodes=nodes, edges=ag_edges, config=cfg)
                 rendered = True
             except Exception as exc:
-                print(f"[Rebound] graphviz fallback failed ({exc}).")
-        if not rendered:
-            st.info("Interactive graph unavailable — showing relationships as a list.")
-            for a, b in edges:
-                st.write(f"{a} -> {b}")
-        # topic picker (also drives the inspector; works with every fallback)
-        picked = st.selectbox("Inspect topic", titles,
-                              index=titles.index(st.session_state["kmap_sel_topic"])
-                              if st.session_state.get("kmap_sel_topic") in titles else 0,
-                              key="kmap_pick")
-        if clicked and clicked in titles:
-            st.session_state["kmap_sel_topic"] = clicked
-        else:
-            st.session_state["kmap_sel_topic"] = picked
-        if not edges:
-            st.info("No prerequisite relationships were detected. "
-                    "Each topic is currently treated as independent.")
+                print(f"[Rebound] streamlit-agraph unavailable ({exc}); graphviz fallback.")
+            if not rendered:
+                try:
+                    dot = [
+                        "digraph G {", 'rankdir=LR; bgcolor="transparent"; splines=true;',
+                        'node [style=filled, fontname="Helvetica", fontcolor="#17233A", '
+                        'color="#D5DEE8", penwidth=1.2, shape=circle];',
+                        'edge [color="#C6D0DC", arrowsize=.75, penwidth=1.2];',
+                    ]
+                    title_ids = {t: f"n{i}" for i, t in enumerate(titles)}
+                    for topic, node_id in title_ids.items():
+                        dot.append(
+                            f'{node_id} [label={json.dumps(str(topic))}, fillcolor="{_node_color(topic)}"];'
+                        )
+                    for source, target in edges:
+                        dot.append(f'{title_ids[source]} -> {title_ids[target]};')
+                    dot.append("}")
+                    st.graphviz_chart("\n".join(dot), use_container_width=True)
+                    rendered = True
+                except Exception as exc:
+                    print(f"[Rebound] graphviz fallback failed ({exc}).")
+            if not rendered:
+                st.info("Interactive graph unavailable — showing relationships as a list.")
+                for a, b in edges:
+                    st.write(f"{a} → {b}")
+            picked = st.selectbox("Inspect topic", titles,
+                                  index=titles.index(st.session_state["kmap_sel_topic"])
+                                  if st.session_state.get("kmap_sel_topic") in titles else 0,
+                                  key="kmap_pick")
+            if clicked and clicked in titles:
+                st.session_state["kmap_sel_topic"] = clicked
+            else:
+                st.session_state["kmap_sel_topic"] = picked
+            if not edges:
+                st.info("No prerequisite relationships were detected. "
+                        "Each topic is currently treated as independent.")
+        with _card("knowledge_map_legend"):
+            st.markdown(
+                "<div class='rb-kmap-legend'><strong>Map legend</strong>"
+                "<span><i class='foundation'></i>Foundation</span>"
+                "<span><i class='intermediate'></i>Intermediate</span>"
+                "<span><i class='advanced'></i>Advanced</span>"
+                "<span><i class='critical'></i>Exam Critical</span>"
+                "<span><i class='independent'></i>Independent</span></div>",
+                unsafe_allow_html=True)
     with insp_col:
         render_topic_inspector(sections, graph, st.session_state.get("kmap_sel_topic"))
 
@@ -2580,8 +2621,42 @@ def _merge_topics(a, b):
 
 
 def page_knowledge_map():
-    _page_title("Knowledge Map", "book")
-    st.caption("Explore how your topics connect and build on each other.")
+    st.markdown("""
+    <style>
+    [class*="st-key-rb_page_knowledge_map"]{max-width:1500px;margin:0 auto;padding:1rem 0 2rem;}
+    [class*="st-key-rb_card_neutral_knowledge_map_header"],
+    [class*="st-key-rb_card_neutral_knowledge_map_graph"],
+    [class*="st-key-rb_card_neutral_knowledge_map_legend"],
+    [class*="st-key-rb_insight_neutral_knowledge_map_inspector"]{
+      border:1px solid var(--rb-neutral-border);border-radius:20px;background:rgba(255,255,255,.94);
+      box-shadow:var(--rb-shadow-card);padding:1.25rem;
+    }
+    [class*="st-key-rb_card_neutral_knowledge_map_header"]{margin-bottom:1rem;box-shadow:none;}
+    [class*="st-key-rb_card_neutral_knowledge_map_graph"]{min-height:610px;overflow:hidden;
+      background-color:#fffdfa;background-image:radial-gradient(#DDE1E8 1px,transparent 1px);background-size:18px 18px;}
+    [class*="st-key-rb_card_neutral_knowledge_map_legend"]{margin-top:1rem;padding:.9rem 1rem;box-shadow:none;}
+    [class*="st-key-rb_insight_neutral_knowledge_map_inspector"]{height:100%;}
+    .rb-kmap-panel-title{display:flex;align-items:center;gap:9px;margin-bottom:1rem;color:#17233A;font-weight:800;}
+    .rb-kmap-topic-title{margin:.65rem 0 .6rem!important;color:#17233A!important;font-size:1.35rem!important;}
+    .rb-kmap-legend{display:flex;align-items:center;gap:14px;flex-wrap:wrap;font-size:.78rem;color:#667085;}
+    .rb-kmap-legend strong{color:#17233A;margin-right:4px}.rb-kmap-legend span{display:inline-flex;align-items:center;gap:6px;}
+    .rb-kmap-legend i{width:10px;height:10px;border-radius:50%;display:inline-block;}
+    .rb-kmap-legend .foundation{background:#62C989}.rb-kmap-legend .intermediate{background:#5AA9E6}
+    .rb-kmap-legend .advanced{background:#8B72E6}.rb-kmap-legend .critical{background:#FF7A59}
+    .rb-kmap-legend .independent{background:#B8C0CC}
+    @media(max-width:950px){
+      [class*="st-key-rb_kmap_layout"]>div>[data-testid="stHorizontalBlock"]{flex-direction:column;}
+      [class*="st-key-rb_kmap_layout"]>div>[data-testid="stHorizontalBlock"]>[data-testid="stColumn"]{width:100%!important;flex:1 1 100%!important;}
+    }
+    @media(max-width:700px){
+      [class*="st-key-rb_page_knowledge_map"]{padding:.5rem 0 1rem;overflow-x:hidden;}
+      [class*="st-key-rb_card_neutral_knowledge_map_graph"]{min-height:520px;padding:.8rem;}
+    }
+    </style>""", unsafe_allow_html=True)
+    with _page_shell("knowledge_map"):
+        with _card("knowledge_map_header"):
+            _page_header("Knowledge Map", "Explore how concepts connect and build on one another.",
+                         icon_name="book")
     sections = st.session_state.get("sections") or []
     graph = st.session_state.get("prerequisites", {})
     mastery = st.session_state.get("mastery_scores", {})

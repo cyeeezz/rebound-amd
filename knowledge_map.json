@@ -2,14 +2,14 @@
   "topics": [
     {
       "title": "Cell Structure",
-      "summary": "Learning objectives\n● Identify the main organelles found in eukaryotic cells and state their functions. ● Compare prokaryotic and eukaryotic cells.",
+      "summary": "Cell Structure\nLearning objectives\n● Identify the main organelles found in eukaryotic cells and state their functions. ● Compare prokaryotic and eukaryotic cells.",
       "key_concepts": [
         "Cells",
         "Mitochondria",
         "Ribosomes",
-        "Learning",
-        "Identify",
-        "Compare"
+        "Cell",
+        "Structure",
+        "Learning"
       ],
       "definitions": [
         "Explanation\nAll living organisms are composed of cells, and their internal organisation determines what a cell\ncan do.",
@@ -18,7 +18,7 @@
         "● Mitochondria carry out many reactions of aerobic respiration and use energy released\nfrom glucose to produce ATP, but are not the sole site of respiration."
       ],
       "learning_objectives": [
-        "Understand: Learning objectives ● Identify the main organelles found in eukaryotic cells and state the",
+        "Understand: Cell Structure Learning objectives ● Identify the main organelles found in eukaryotic cell",
         "Understand: ● Compare prokaryotic and eukaryotic cells.",
         "Understand: ● Recognise structural features unique to plant cells."
       ],
@@ -30,14 +30,14 @@
     },
     {
       "title": "Cellular Respiration",
-      "summary": "Learning objectives\n● Describe the overall purpose and general equation of aerobic respiration. ● State where glycolysis and the later stages of aerobic respiration take place.",
+      "summary": "Cellular Respiration\nLearning objectives\n● Describe the overall purpose and general equation of aerobic respiration. ● State where glycolysis and the later stages of aerobic respiration take place.",
       "key_concepts": [
         "Aerobic",
+        "Respiration",
         "Explain",
         "Glycolysis",
-        "Respiration",
-        "Learning",
-        "Describe"
+        "Cellular",
+        "Learning"
       ],
       "definitions": [
         "Explanation\nBuilding on the organelles introduced in the previous section, respiration is the process by which\ncells break down glucose to release energy.",
@@ -46,13 +46,13 @@
         "When oxygen is limited or\nabsent, cells rely instead on anaerobic pathways."
       ],
       "learning_objectives": [
-        "Understand: Learning objectives ● Describe the overall purpose and general equation of aerobic respira",
+        "Understand: Cellular Respiration Learning objectives ● Describe the overall purpose and general equati",
         "Understand: ● State where glycolysis and the later stages of aerobic respiration take place.",
         "Understand: ● Compare aerobic respiration with anaerobic pathways."
       ],
       "biological_processes": [
-        "Glycolysis",
-        "Respiration"
+        "Respiration",
+        "Glycolysis"
       ],
       "relationships": [],
       "prerequisites": [],
@@ -61,14 +61,14 @@
     },
     {
       "title": "Energy Transfer in Cells",
-      "summary": "Learning objectives\n● Describe the roles of ATP and ADP in cells. ● Explain how ATP hydrolysis releases energy for cellular use.",
+      "summary": "Energy Transfer in Cells\nLearning objectives\n● Describe the roles of ATP and ADP in cells. ● Explain how ATP hydrolysis releases energy for cellular use.",
       "key_concepts": [
         "Explain",
+        "Energy",
+        "Cells",
+        "Transfer",
         "Learning",
-        "Describe",
-        "Identify",
-        "Explanation",
-        "Cells"
+        "Describe"
       ],
       "definitions": [
         "● Explain why some energy is always lost as heat during these transfers.",
@@ -77,13 +77,11 @@
         "Key points\n● ATP is formed by adding a phosphate group to ADP, using energy released during\nrespiration."
       ],
       "learning_objectives": [
-        "Understand: Learning objectives ● Describe the roles of ATP and ADP in cells.",
+        "Understand: Energy Transfer in Cells Learning objectives ● Describe the roles of ATP and ADP in cells.",
         "Understand: ● Explain how ATP hydrolysis releases energy for cellular use.",
         "Understand: ● Identify processes that rely on ATP as an energy transfer molecule."
       ],
-      "biological_processes": [
-        "Explanation"
-      ],
+      "biological_processes": [],
       "relationships": [
         "Cell Structure",
         "Cellular Respiration"
@@ -97,14 +95,14 @@
     },
     {
       "title": "DNA Structure",
-      "summary": "Learning objectives\n● Describe the structure of a DNA nucleotide and the double helix. ● Explain complementary base pairing and its role in accurate replication.",
+      "summary": "DNA Structure\nLearning objectives\n● Describe the structure of a DNA nucleotide and the double helix. ● Explain complementary base pairing and its role in accurate replication.",
       "key_concepts": [
         "Explain",
+        "Structure",
         "Learning",
         "Describe",
         "Distinguish",
-        "Recognise",
-        "Explanation"
+        "Recognise"
       ],
       "definitions": [
         "Explanation\nDNA (deoxyribonucleic acid) is the molecule that carries genetic information in almost all living\norganisms.",
@@ -113,18 +111,18 @@
         "● A chromosome consists of a long DNA molecule associated with proteins; a gene is a\nsection of DNA containing instructions for a functional product."
       ],
       "learning_objectives": [
-        "Understand: Learning objectives ● Describe the structure of a DNA nucleotide and the double helix.",
+        "Understand: DNA Structure Learning objectives ● Describe the structure of a DNA nucleotide and the dou",
         "Understand: ● Explain complementary base pairing and its role in accurate replication.",
         "Understand: ● Distinguish between DNA, genes, and chromosomes."
       ],
-      "biological_processes": [
-        "Explanation"
-      ],
+      "biological_processes": [],
       "relationships": [
+        "Cell Structure",
         "Cellular Respiration",
         "Energy Transfer in Cells"
       ],
       "prerequisites": [
+        "Cell Structure",
         "Cellular Respiration",
         "Energy Transfer in Cells"
       ],
@@ -133,14 +131,14 @@
     },
     {
       "title": "Gene Expression",
-      "summary": "Learning objectives\n● Describe transcription and translation, and state where each occurs. ● Explain the roles of mRNA, ribosomes, codons, and amino acids.",
+      "summary": "Gene Expression\nLearning objectives\n● Describe transcription and translation, and state where each occurs. ● Explain the roles of mRNA, ribosomes, codons, and amino acids.",
       "key_concepts": [
+        "Gene",
         "Explain",
+        "Expression",
         "Learning",
         "Describe",
-        "Recognise",
-        "Understand",
-        "Explanation"
+        "Recognise"
       ],
       "definitions": [
         "Explanation\nThe sections of DNA introduced in the previous section only have an effect on a cell once their\ninformation is put to use, through a process called gene expression.",
@@ -149,13 +147,11 @@
         "Many genes are expressed in this\nway to produce proteins, but not all of them are: some genes are transcribed into RNA\nmolecules that carry out a function directly, without ever being translated into protein."
       ],
       "learning_objectives": [
-        "Understand: Learning objectives ● Describe transcription and translation, and state where each occurs.",
+        "Understand: Gene Expression Learning objectives ● Describe transcription and translation, and state wh",
         "Understand: ● Explain the roles of mRNA, ribosomes, codons, and amino acids.",
         "Understand: ● Recognise that genes can produce proteins or functional RNA molecules."
       ],
-      "biological_processes": [
-        "Explanation"
-      ],
+      "biological_processes": [],
       "relationships": [
         "Cellular Respiration",
         "Energy Transfer in Cells",
@@ -171,14 +167,14 @@
     },
     {
       "title": "Genetic Inheritance",
-      "summary": "Learning objectives\n● Define allele, genotype, and phenotype. ● Explain dominant and recessive inheritance using a Punnett-square example.",
+      "summary": "Genetic Inheritance\nLearning objectives\n● Define allele, genotype, and phenotype. ● Explain dominant and recessive inheritance using a Punnett-square example.",
       "key_concepts": [
         "Explain",
         "Many",
+        "Genetic",
+        "Inheritance",
         "Learning",
-        "Define",
-        "Punnett-square",
-        "Distinguish"
+        "Define"
       ],
       "definitions": [
         "Most human\nbody cells are diploid, meaning they contain two sets of chromosomes, one inherited from each\nparent.",
@@ -187,7 +183,7 @@
         "In simple cases of complete dominance, a dominant allele affects the\nphenotype when one or two copies are present, while the recessive phenotype appears only\nwhen two recessive alleles are inherited."
       ],
       "learning_objectives": [
-        "Understand: Learning objectives ● Define allele, genotype, and phenotype.",
+        "Understand: Genetic Inheritance Learning objectives ● Define allele, genotype, and phenotype.",
         "Understand: ● Explain dominant and recessive inheritance using a Punnett-square example.",
         "Understand: ● Distinguish diploid body cells from haploid gametes."
       ],
@@ -211,7 +207,7 @@
     },
     {
       "title": "Historical Biology Experiments",
-      "summary": "Learning objectives\n● Describe Robert Hooke's observations of cork and their significance. ● Explain what Mendel's pea-plant experiments revealed about inheritance.",
+      "summary": "Historical Biology Experiments\nLearning objectives\n● Describe Robert Hooke's observations of cork and their significance. ● Explain what Mendel's pea-plant experiments revealed about inheritance.",
       "key_concepts": [
         "Franklin",
         "Hooke",
@@ -222,7 +218,7 @@
       ],
       "definitions": [],
       "learning_objectives": [
-        "Understand: Learning objectives ● Describe Robert Hooke's observations of cork and their significance.",
+        "Understand: Historical Biology Experiments Learning objectives ● Describe Robert Hooke's observations ",
         "Understand: ● Explain what Mendel's pea-plant experiments revealed about inheritance.",
         "Understand: ● Describe how the Hershey–Chase experiment identified DNA as genetic material."
       ],
@@ -233,6 +229,6 @@
       "estimated_study_time": "90 min"
     }
   ],
-  "generated": 1783761171.342878,
+  "generated": 1783776594.5770128,
   "source": "local"
 }
