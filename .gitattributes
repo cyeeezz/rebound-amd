@@ -1,0 +1,4 @@
+# Keep AMD artifacts byte-identical to the notebook output (LF).
+amd_artifacts/*.json text eol=lf
+amd_artifacts/*.npy binary
+knowledge_map.json text eol=lf
