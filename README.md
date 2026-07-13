@@ -24,6 +24,27 @@ student's revision notes into a prerequisite-aware, self-adjusting study plan.
 - Fireworks AI reasoning
 - Live Streamlit application
 
+## Quick Links
+
+- **Live Demo:** https://rebound-amd.streamlit.app/
+- **Demo Video:** https://drive.google.com/file/d/1UxHnfuKIPjFnWJrQL6jqemeWfrPTTOxe/view
+- **Slide Deck:** [Rebound Track 3 Slide Deck](submission/Rebound_Track_3_Slide_Deck.pdf)
+- **Sample Test File:** [Sample A-Level Biology Notes](sample-data/sample-a-level-biology-notes.pdf)
+- **AMD Execution Documentation:** [docs/AMD_EXECUTION.md](docs/AMD_EXECUTION.md)
+- **GitHub Repository:** https://github.com/cyeeezz/rebound-amd
+
+## Judge Quick Start
+
+1. Open the **[Live Demo](https://rebound-amd.streamlit.app/)**.
+2. Upload the sample PDF: [`sample-data/sample-a-level-biology-notes.pdf`](sample-data/sample-a-level-biology-notes.pdf).
+3. View the generated **adaptive study plan**.
+4. View the **knowledge graph** (prerequisites + AMD semantic relationships).
+5. Read the **[AMD GPU execution evidence](docs/AMD_EXECUTION.md)** and the in-app Verified AMD GPU Execution panel.
+6. Watch the **[demo video](https://drive.google.com/file/d/1UxHnfuKIPjFnWJrQL6jqemeWfrPTTOxe/view)**.
+7. Read the **[Track 3 slide deck](submission/Rebound_Track_3_Slide_Deck.pdf)**.
+
+---
+
 ---
 
 ## Overview
@@ -229,6 +250,24 @@ populate as shown.
 - Sample file: [sample-a-level-biology-notes.pdf](sample-data/sample-a-level-biology-notes.pdf)
 - Full testing instructions: [sample-data/README.md](sample-data/README.md)
 
+## Test Files
+
+The repository includes a ready-to-use sample document:
+[`sample-data/sample-a-level-biology-notes.pdf`](sample-data/sample-a-level-biology-notes.pdf).
+It is the **same A-Level Biology material** used to produce the committed AMD
+semantic-embedding artifacts (seven topics), so uploading it reproduces the
+demonstrated workflow end to end:
+
+- **OCR** — scanned/image PDFs are read via an optional vision path (digital-text
+  PDFs like this sample skip OCR entirely).
+- **Topic extraction** — Fireworks AI identifies topics, concepts, and objectives.
+- **Semantic embeddings** — the AMD ROCm artifacts provide topic-to-topic
+  similarity that enriches the knowledge graph.
+- **Recovery planning** — the diagnostic feeds an adaptive, prerequisite-aware
+  study plan.
+
+See [`sample-data/README.md`](sample-data/README.md) for full testing steps.
+
 ## Repository Structure
 
 ```text
@@ -248,6 +287,9 @@ rebound-amd/
 ├── sample-data/
 │   ├── README.md              # Sample-file testing instructions
 │   └── sample-a-level-biology-notes.pdf   # Demo A-Level Biology notes (10 pages)
+├── submission/
+│   ├── README.md              # Submission index (demo, video, slides)
+│   └── Rebound_Track_3_Slide_Deck.pdf   # Track 3 slide deck
 ├── requirements.txt
 ├── .streamlit/config.toml    # Upload cap + XSRF protection
 ├── .gitattributes
