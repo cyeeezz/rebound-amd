@@ -36,7 +36,7 @@
 ### Fireworks analysis (`analyze_document_with_fireworks(text, model) -> dict`)
 - **Live call** via `OpenAI(api_key=..., base_url="https://api.fireworks.ai/inference/v1")`.
 - Model: `accounts/fireworks/models/llama-v3p1-70b-instruct` (alt: `deepseek-v3`).
-- Key resolution order: `st.secrets["FIREWORKS_API_KEY"]` → `os.getenv("FIREWORKS_API_KEY")` → hardcoded default.
+- Key resolution order: `st.secrets["FIREWORKS_API_KEY"]` → `os.getenv("FIREWORKS_API_KEY")` → raises a clear configuration error if unset (no hardcoded default).
 - `response_format={"type":"json_object"}` requesting `{"sections":[{"title","body"}]}`; text capped at 12,000 chars.
 - **Fallback:** on missing SDK / API error / invalid JSON / empty sections → `_fallback_response()` uses local `_segment_sections()`. Same `{model, sections:[{title,body,lines}]}` shape either way; `source` field flags which path ran. `OpenAI` import is guarded so a missing package can't crash the app.
 - Supporting helpers: `_normalize_api_sections`, `_segment_sections`, `_is_heading`, `_clean_title`, `build_sections`, `parse_fireworks_response`, `build_topic_graph`, `calculate_document_statistics`, `_key_concepts`, `_learning_objectives`, `_quick_check`, `_estimate_difficulty`, `_estimate_study_time`.
@@ -68,15 +68,18 @@
 - **Graceful fallbacks** everywhere (PDF engines, API → local heuristic) so the app never crashes.
 - **Verification:** logic unit-tested with standalone scripts before hand-off.
 
-## 6. Current Status, Errors & Blockers
-- ✅ Full 5-tab app implemented; extraction, diagnostic, study plan, and recovery engine all working and unit-tested.
-- ✅ Fireworks live call wired with robust fallback; all five code paths tested with a mocked client.
-- ⚠️ **Live Fireworks round-trip not yet verified over the network** — real key/model behavior will only surface when run locally. Watch terminal for `[Rebound] Fireworks AI returned N sections.` (success) vs `Fireworks API call failed (...)` (fallback).
-- ⚠️ **Security:** the Fireworks API key is currently hardcoded as a default in `app.py`. Recommend rotating it and using an env var or `.streamlit/secrets.toml` (both already take priority over the default).
-- ⚠️ **"Scanned images" bug (resolved as environment issue):** the sample PDF (`sample-a-level-biology-notes.pdf`) extracts fine — all 3 engines return 10 pages / ~18,400 chars / 2,800 words. The error occurs only when the PDF libs aren't installed in the interpreter running Streamlit → fix with `python -m pip install -r requirements.txt`.
-- 🧹 Minor cleanup: `extract_topics()` is now dead code (Knowledge Map uses `sections` instead) — safe to delete.
+## 6. Current Status
+- ✅ The Streamlit app is fully implemented and deployed (live at https://rebound-amd.streamlit.app/).
+- ✅ Fireworks AI is configured through Streamlit secrets (`.streamlit/secrets.toml`) or the `FIREWORKS_API_KEY` environment variable. **No API key is hardcoded in the current application code** — `_get_fireworks_api_key()` reads secrets → environment and raises a clear error if unset.
+- ✅ Sample PDF extraction succeeds — `sample-data/sample-a-level-biology-notes.pdf` reads as 10 pages / ~18,400 characters through the pdfplumber → PyMuPDF → pypdf cascade.
+- ✅ AMD ROCm notebook execution and the generated artifacts (`embeddings.npy`, `topic_metadata.json`, `amd_run_manifest.json`) are committed.
+- ✅ Verified AMD GPU Execution and AMD semantic relationships are integrated into the app (loaded at runtime via `utils/amd_loader.py`).
+- ✅ Documentation, sample data, demo links, and step-by-step AMD evidence are included in the repository.
 
-## 7. Immediate Next Step
-1. **Verify the live Fireworks call end-to-end:** run the app locally, upload `sample-a-level-biology-notes.pdf`, and confirm the terminal prints `Fireworks AI returned N sections` (not the fallback). Fix key/model if it falls back.
-2. **Then:** surface the analysis `source` (live API vs. local fallback) as a small badge in the Setup UI so it's obvious during a demo which path ran.
-3. Rotate the hardcoded API key and move it to `secrets.toml` / env var.
+## 7. Remaining Submission Tasks
+1. Confirm the Google Drive demo video is publicly accessible (“Anyone with the link — Viewer”).
+2. Confirm the slide deck PDF (`submission/Rebound_Track_3_Slide_Deck.pdf`) is committed.
+3. Perform one final incognito test of the live app.
+4. Submit the repository, demo video, slide deck, and hosted URL.
+
+No known technical blockers remain for the Track 3 submission.
