@@ -218,6 +218,17 @@ Store the key in `.streamlit/secrets.toml` (git-ignored):
 FIREWORKS_API_KEY = "fw-..."
 ```
 
+## Try Rebound with the Sample File
+
+Don't have your own notes? Download the sample A-Level Biology PDF and upload it
+to the [live application](https://rebound-amd.streamlit.app/) to reproduce the
+demonstrated biology workflow end to end. The file covers the same seven topics
+used to build the AMD artifacts, so the diagnostic, plan, and knowledge map all
+populate as shown.
+
+- Sample file: [sample-a-level-biology-notes.pdf](sample-data/sample-a-level-biology-notes.pdf)
+- Full testing instructions: [sample-data/README.md](sample-data/README.md)
+
 ## Repository Structure
 
 ```text
@@ -234,6 +245,9 @@ rebound-amd/
 │   ├── AMD_EXECUTION.md       # AMD technical reference
 │   ├── GITHUB_ABOUT.md        # Suggested GitHub About metadata
 │   └── amd-evidence/          # Execution screenshots 01–10 + supplementary/
+├── sample-data/
+│   ├── README.md              # Sample-file testing instructions
+│   └── sample-a-level-biology-notes.pdf   # Demo A-Level Biology notes (10 pages)
 ├── requirements.txt
 ├── .streamlit/config.toml    # Upload cap + XSRF protection
 ├── .gitattributes
